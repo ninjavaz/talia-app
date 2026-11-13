@@ -1,6 +1,7 @@
 package app.talia.auth;
 
 import app.talia.IntegrationTest;
+import app.talia.auth.model.TaliaUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;

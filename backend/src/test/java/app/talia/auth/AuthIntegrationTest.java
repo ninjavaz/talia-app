@@ -1,6 +1,7 @@
 package app.talia.auth;
 
 import app.talia.IntegrationTest;
+import app.talia.auth.service.AccountCleanupService;
 import app.talia.common.Hashes;
 import com.jayway.jsonpath.JsonPath;
 import org.altcha.altcha.v2.Altcha;
@@ -34,7 +35,7 @@ class AuthIntegrationTest extends IntegrationTest {
     private static final Pattern LINK_TOKEN = Pattern.compile("https://talia\\.test/(verify|reset)#t=([A-Za-z0-9_-]{43})");
 
     @Autowired
-    AccountCleanup cleanup;
+    AccountCleanupService cleanup;
 
     private ResultActions login(String username, String password, String ip) throws Exception {
         return mvc.perform(post("/api/auth/login").with(fromIp(ip)).contentType(MediaType.APPLICATION_JSON)

@@ -1,8 +1,8 @@
 package app.talia;
 
-import app.talia.auth.Mailer;
-import app.talia.auth.TaliaUser;
-import app.talia.auth.UserAccounts;
+import app.talia.auth.model.TaliaUser;
+import app.talia.auth.service.MailService;
+import app.talia.auth.service.UserAccountService;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -63,11 +63,11 @@ public abstract class IntegrationTest {
     protected JdbcClient jdbc;
 
     @Autowired
-    protected UserAccounts accounts;
+    protected UserAccountService accounts;
 
     /** E-mails are not sent in tests; tests read them from this mock. */
     @MockitoBean
-    protected Mailer mailer;
+    protected MailService mailer;
 
     protected MockMvc mvc;
     protected TaliaUser talia;

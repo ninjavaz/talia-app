@@ -1,6 +1,8 @@
 package app.talia.measurement;
 
 import app.talia.IntegrationTest;
+import app.talia.measurement.model.Point;
+import app.talia.measurement.service.CheckinService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
@@ -189,9 +191,9 @@ class CheckinIntegrationTest extends IntegrationTest {
     @Test
     void movingAverageUsesTheLastSevenDays() {
         var points = List.of(
-                new CheckinDtos.Point(LocalDate.parse("2026-11-01"), new BigDecimal("65")),
-                new CheckinDtos.Point(LocalDate.parse("2026-11-03"), new BigDecimal("64")),
-                new CheckinDtos.Point(LocalDate.parse("2026-11-10"), new BigDecimal("63")));
+                new Point(LocalDate.parse("2026-11-01"), new BigDecimal("65")),
+                new Point(LocalDate.parse("2026-11-03"), new BigDecimal("64")),
+                new Point(LocalDate.parse("2026-11-10"), new BigDecimal("63")));
         var trend = CheckinService.movingAverage(points, 7);
         assertThat(trend.get(1).value()).isEqualByComparingTo("64.5");
         assertThat(trend.get(2).value()).isEqualByComparingTo("63");
