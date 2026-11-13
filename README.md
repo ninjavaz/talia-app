@@ -20,11 +20,15 @@ Skrypt otwiera dwa okna:
 
 | | Adres | Skrypt |
 |---|---|---|
-| Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (najpierw sam startuje bazę) |
+| Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (najpierw sam startuje bazę), albo `cd backend` + `.\mvnw.cmd` |
 | Frontend | http://localhost:4200 | `scripts\dev-frontend.cmd` (`npm start`, `/api` przez proxy do :8080) |
 
 - Login: `talia` / `talia`
 - Token synchronizacji: `test-token`
+
+`.\mvnw.cmd` bez argumentów uruchamia backend z profilem `dev`. Ustawienia lokalne są w [backend/config/application-dev.yml](backend/config/application-dev.yml), który nie trafia do jara. Baza musi wtedy działać (`scripts\db-start.cmd`).
+
+Po zmianach w `tsconfig.json` (np. nowe komponenty Spartana) zrestartuj `npm start`, bo serwer w trybie watch nie wczytuje aliasów ścieżek ponownie.
 
 ### Baza danych
 

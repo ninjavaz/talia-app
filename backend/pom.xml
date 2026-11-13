@@ -121,10 +121,17 @@
 	</dependencies>
 
 	<build>
+		<!-- `.\mvnw.cmd` with no arguments starts the app locally (profile dev, config/application-dev.yml) -->
+		<defaultGoal>spring-boot:run</defaultGoal>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<profiles>
+						<profile>dev</profile>
+					</profiles>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
