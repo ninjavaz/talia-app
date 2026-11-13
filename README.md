@@ -23,11 +23,25 @@ Skrypt otwiera dwa okna:
 | Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (najpierw sam startuje bazę), albo `cd backend` + `.\mvnw.cmd` |
 | Frontend | http://localhost:4200 | `scripts\dev-frontend.cmd` (`npm start`, `/api` przez proxy do :8080) |
 
-Konto zakładasz w aplikacji (zakładka „Załóż konto”). Osobisty token do synchronizacji z Apple Health generujesz w Ustawieniach.
+Konto zakładasz w aplikacji (zakładka „Załóż konto”). Mail z linkiem potwierdzającym (i z resetem hasła) lokalnie nigdzie nie wychodzi: łapie go **Mailpit** na http://localhost:8025. Osobisty token do synchronizacji z Apple Health generujesz w Ustawieniach.
 
 `.\mvnw.cmd` bez argumentów uruchamia backend z profilem `dev`. Ustawienia lokalne są w [backend/config/application-dev.yml](backend/config/application-dev.yml), który nie trafia do jara. Baza musi wtedy działać (`scripts\db-start.cmd`).
 
 Po zmianach w `tsconfig.json` (np. nowe komponenty Spartana) zrestartuj `npm start`, bo serwer w trybie watch nie wczytuje aliasów ścieżek ponownie.
+
+### Wysyłka maili (produkcja)
+
+Backend wysyła maile przez zwykłe SMTP, więc dostawcę zmienia się samą konfiguracją (zmienne środowiskowe):
+
+| Zmienna | Przykład |
+|---|---|
+| `MAIL_HOST`, `MAIL_PORT` | `smtp-relay.brevo.com`, `587` |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | login / klucz SMTP od dostawcy |
+| `MAIL_FROM` | `Talia <no-reply@twoja-domena.pl>` |
+| `PUBLIC_URL` | `https://talia.twoja-domena.pl` (linki w mailach) |
+| `ALTCHA_HMAC_SECRET` | długi losowy ciąg (opcjonalnie; bez niego losowy przy każdym starcie) |
+
+Domena nadawcy musi mieć ustawione SPF i DKIM (dostawca podaje rekordy DNS), inaczej maile trafią do spamu.
 
 ### Baza danych
 
@@ -35,7 +49,7 @@ Lokalny Postgres 18 działa w Dockerze ([compose.dev.yml](compose.dev.yml)) na *
 
 | Skrypt | Co robi |
 |---|---|
-| `scripts\db-start.cmd` | startuje bazę i czeka, aż będzie gotowa |
+| `scripts\db-start.cmd` | startuje bazę i Mailpit, czeka, aż będą gotowe |
 | `scripts\db-reset.cmd` | usuwa bazę razem z danymi (pyta o potwierdzenie) |
 
 Schemat tworzy Flyway przy starcie backendu. Pełny reset: `db-reset`, potem `dev-backend`.

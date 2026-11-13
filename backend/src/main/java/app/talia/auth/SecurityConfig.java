@@ -51,6 +51,7 @@ class SecurityConfig {
                 .securityContext(sc -> sc.securityContextRepository(securityContextRepository))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/challenge",
+                                "/api/auth/verify-email", "/api/auth/forgot-password", "/api/auth/reset-password",
                                 "/actuator/health", "/error").permitAll()
                         .requestMatchers("/api/**").hasRole("USER")
                         .anyRequest().denyAll())

@@ -34,11 +34,19 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   (or belongs to a user's body_part/habit) and **every query filters by the logged-in user** (`@AuthenticationPrincipal TaliaUser`).
   Foreign ids behave like missing ones (404/400). `DataIsolationIntegrationTest` guards this - extend it for new endpoints.
 - Security: bcrypt cost 12; password min 10 chars, max 72 bytes, small deny-list; usernames lowercase `[a-z0-9._-]{3,30}`.
-  Registration bot check = self-hosted proof of work (ALTCHA format, `ProofOfWork`) + honeypot `website` + per-IP limits.
-  Login throttling per IP and per username (429 + Retry-After). Session: spring-session-jdbc, 365 days sliding,
+  Registration bot check = official ALTCHA (Java `org.altcha:altcha` v2 PBKDF2, deterministic mode, in `BotCheck`;
+  npm widget `altcha` in `AltchaField`), each solution used once (`altcha_used`) + honeypot `website` + per-IP limits.
+  Rate limits with **Bucket4j** stored in Postgres (`rate_limit_bucket`, ids = SHA-256 of key) in `RateLimits`:
+  failed logins per IP and per username (429 + Retry-After), registrations, challenges, e-mails per IP and per address.
+- **E-mail (2026-11-13)**: registration requires an e-mail; login only after confirming it (403 `EMAIL_NOT_VERIFIED`,
+  a new link is sent on that login attempt). Password reset by e-mail (`/forgot-password`, `/reset-password`, ends all
+  sessions). Links `/verify#t=` and `/reset#t=` (token in the fragment, only SHA-256 stored in `email_token`).
+  Answers never reveal whether an address has an account. Unconfirmed accounts are deleted after 48 h (`AccountCleanup`).
+  Sending: plain SMTP (`spring.mail.*`, env `MAIL_*`), provider-agnostic, `@Async` `Mailer`; locally Mailpit
+  (compose.dev.yml, UI http://localhost:8025). Tests mock `Mailer`. Session: spring-session-jdbc, 365 days sliding,
   cookie defined in `SessionCookieConfig` (HttpOnly, Secure, SameSite=Strict = CSRF defense); `/api/auth/me`
   re-issues it on every app start. Per-user Apple Health sync token: random 256 bit, only SHA-256 stored, shown once.
-- Migrations were squashed into a single V1 before the first deployment (no deployed DB existed).
+- Migrations were squashed into a single V1 before the first deployment; new changes go into new migrations (V2...).
 - Weekly workout goal = one number; **all workouts of the week count** (also walks). Workouts get a category
   (GYM/PILATES/WALK/OTHER) derived from the Health type name (PL+EN keywords) or chosen when added manually.
 - **Manual-first (2026-11-13)**: once a week (Sunday) a *check-in* with waist, weight and the week's **average daily steps**

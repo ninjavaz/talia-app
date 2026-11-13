@@ -1,5 +1,9 @@
 talia:
+  public-url: https://talia.test
   security:
     cookie-secure: false
-    pow-max-number: 2000
     registrations-per-ip: 3
+    altcha:
+      # tests solve challenges in Java
+      cost: 10
+      max-counter: 50

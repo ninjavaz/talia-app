@@ -1,5 +1,6 @@
 package app.talia.auth;
 
+import app.talia.common.Hashes;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -34,7 +35,7 @@ class SyncTokenFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith(BEARER)) {
             String token = header.substring(BEARER.length()).trim();
-            Long userId = token.length() >= 20 ? accounts.userIdForSyncTokenHash(ProofOfWork.sha256(token)) : null;
+            Long userId = token.length() >= 20 ? accounts.userIdForSyncTokenHash(Hashes.sha256(token)) : null;
             if (userId != null) {
                 SecurityContext context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(

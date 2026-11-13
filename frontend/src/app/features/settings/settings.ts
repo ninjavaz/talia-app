@@ -148,6 +148,9 @@ import { Theme } from '../../core/theme/theme';
 
     <tl-section-header [title]="'settings.account' | t" />
     <tl-list>
+      @if (auth.email(); as email) {
+        <tl-list-item icon="lucideMail" [title]="'settings.email' | t: { email }" />
+      }
       <button
         tlListItem
         icon="lucideLogOut"

@@ -7,9 +7,18 @@ spring:
     url: jdbc:postgresql://localhost:5433/talia
     username: talia
     password: talia
+  # Mailpit from compose.dev.yml catches every e-mail: http://localhost:8025
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+      mail.smtp.starttls.required: false
 
 talia:
   security:
     cookie-secure: false
     # easier local testing
-    pow-max-number: 20000
+    altcha:
+      max-counter: 300

@@ -1,5 +1,6 @@
 package app.talia;
 
+import app.talia.auth.Mailer;
 import app.talia.auth.TaliaUser;
 import app.talia.auth.UserAccounts;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -29,7 +31,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
  * Base class: full Spring context against a real Postgres (shared container via the cached context).
  * "Now" is fixed to {@link #NOW}: Sunday 15 Nov 2026, 10:00 in Warsaw (week Mon 9 - Sun 15 Nov).
  * <p>
- * Every test starts with one account "talia" (id 1, password {@link #PASSWORD}) that has the built-in waist
+ * Every test starts with one account "talia" (id 1, password {@link #PASSWORD}, confirmed e-mail
+ * talia@example.com) that has the built-in waist
  * (body part 1), three habits (ids 1-3) and the sync token {@link #SYNC_TOKEN}.
  */
 @SpringBootTest
@@ -62,6 +65,10 @@ public abstract class IntegrationTest {
     @Autowired
     protected UserAccounts accounts;
 
+    /** E-mails are not sent in tests; tests read them from this mock. */
+    @MockitoBean
+    protected Mailer mailer;
+
     protected MockMvc mvc;
     protected TaliaUser talia;
 
@@ -69,7 +76,7 @@ public abstract class IntegrationTest {
     void setUpMockMvcAndCleanData() {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         // deleting the users cascades to all their data
-        jdbc.sql("TRUNCATE app_user, spring_session RESTART IDENTITY CASCADE").update();
+        jdbc.sql("TRUNCATE app_user, spring_session, rate_limit_bucket, altcha_used RESTART IDENTITY CASCADE").update();
         talia = accounts.create("talia", PASSWORD);
         jdbc.sql("UPDATE app_user SET sync_token_hash = :hash WHERE id = :id")
                 .param("hash", SYNC_TOKEN_SHA256).param("id", talia.id()).update();
@@ -88,7 +95,7 @@ public abstract class IntegrationTest {
         return authentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
     }
 
-    /** Simulates a request from the given client IP (rate limits are per IP and kept across tests). */
+    /** Simulates a request from the given client IP (rate limits are per IP). */
     protected static RequestPostProcessor fromIp(String ip) {
         return request -> {
             request.setRemoteAddr(ip);
