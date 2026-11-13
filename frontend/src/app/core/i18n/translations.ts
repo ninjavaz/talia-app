@@ -4,7 +4,7 @@ export const LANGS: readonly Lang[] = ['pl', 'en'];
 
 /** Polish is the source of truth: every key must exist here, English is type-checked against it. */
 const pl = {
-  'app.name': 'talia',
+  'app.name': 'Talia',
 
   'nav.progress': 'Postęp',
   'nav.week': 'Tydzień',
@@ -23,6 +23,7 @@ const pl = {
   'common.added': 'Dodano',
   'common.deleted': 'Usunięto',
 
+  'login.slogan': 'Mniej w talii, więcej w Tobie.',
   'login.subtitle': 'Talia, waga, aktywność i nawyki',
   'login.username': 'Login',
   'login.password': 'Hasło',
@@ -113,7 +114,7 @@ const pl = {
 export type TranslationKey = keyof typeof pl;
 
 const en: Record<TranslationKey, string> = {
-  'app.name': 'talia',
+  'app.name': 'Talia',
 
   'nav.progress': 'Progress',
   'nav.week': 'Week',
@@ -132,6 +133,7 @@ const en: Record<TranslationKey, string> = {
   'common.added': 'Added',
   'common.deleted': 'Deleted',
 
+  'login.slogan': 'Less waist, more you.',
   'login.subtitle': 'Waist, weight, activity and habits',
   'login.username': 'Username',
   'login.password': 'Password',

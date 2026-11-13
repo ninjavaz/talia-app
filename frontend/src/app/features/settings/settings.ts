@@ -15,6 +15,7 @@ import {
   TlSectionHeader,
   TlSegmentOption,
   TlSegmented,
+  TlLogo,
   TlToast,
 } from '@talia/ui';
 import { Api, BodyPart, Habit, Settings, safeValue } from '../../core/api';
@@ -38,6 +39,7 @@ import { Theme } from '../../core/theme/theme';
     TlRoundButton,
     TlSectionHeader,
     TlSegmented,
+    TlLogo,
     TranslatePipe,
   ],
   template: `
@@ -134,6 +136,11 @@ import { Theme } from '../../core/theme/theme';
         (click)="logout()"
       ></button>
     </tl-list>
+
+    <footer class="text-muted-foreground mt-10 flex flex-col items-center gap-2 text-center text-sm">
+      <tl-logo [size]="40" wordmark class="text-foreground" />
+      <p>{{ 'login.slogan' | t }}</p>
+    </footer>
   `,
 })
 export class SettingsPage {

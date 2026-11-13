@@ -20,3 +20,4 @@ export * from './lib/sheet/sheet';
 export * from './lib/trend-chart/trend-chart';
 export * from './lib/celebrate/diamonds';
 export * from './lib/toast/toast';
+export * from './lib/logo/logo';

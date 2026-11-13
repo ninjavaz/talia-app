@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TlCard } from '@talia/ui';
+import { TlCard, TlLogo } from '@talia/ui';
 import { HlmButtonImports } from '@ui/button';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
@@ -12,11 +12,15 @@ import { TranslationKey } from '../../core/i18n/translations';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, HlmButtonImports, HlmInputImports, HlmLabelImports, TlCard, TranslatePipe],
+  imports: [FormsModule, HlmButtonImports, HlmInputImports, HlmLabelImports, TlCard, TlLogo, TranslatePipe],
   template: `
     <div class="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-4">
-      <h1 class="text-center text-5xl font-semibold tracking-tight">{{ 'app.name' | t }}</h1>
-      <p class="text-muted-foreground mt-2 mb-8 text-center text-sm">{{ 'login.subtitle' | t }}</p>
+      <div class="mb-8 flex flex-col items-center text-center">
+        <tl-logo [size]="76" />
+        <h1 class="mt-5 text-5xl font-semibold tracking-tight">{{ 'app.name' | t }}</h1>
+        <p class="mt-3 text-lg font-medium">{{ 'login.slogan' | t }}</p>
+        <p class="text-muted-foreground mt-1 text-sm">{{ 'login.subtitle' | t }}</p>
+      </div>
 
       <tl-card>
         <form class="flex flex-col gap-4" (ngSubmit)="submit()">
