@@ -54,7 +54,11 @@ import { WorkoutSheet } from './workout-sheet';
       </div>
     </tl-panel>
 
-    <tl-section-header [title]="'week.habitsToday' | t" />
+    <tl-section-header [title]="'week.habitsToday' | t">
+      <span class="text-muted-foreground text-sm first-letter:uppercase">
+        {{ i18n.date(today, { weekday: 'long', day: 'numeric', month: 'numeric' }) }}
+      </span>
+    </tl-section-header>
     @if (habits().length) {
       <tl-list>
         @for (h of habits(); track h.id) {
