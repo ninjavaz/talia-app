@@ -37,6 +37,11 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - **AI summary postponed to v2** – UI shows a "coming soon" card. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
 - Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
 - **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).
+- **Frontend**: Angular 22 (zoneless, standalone, signals), Tailwind 4 via postcss, **Spartan UI** like the cook-less project
+  (brain from npm, helm components generated into `frontend/src/app/ui`, alias `@ui/*`, style `nova`; add more with
+  `npx ng g @spartan-ng/cli:ui <name>`). **No Nx**, plain Angular CLI. Brand pink is `--primary` in `styles.css`.
+  i18n: own signal-based dictionary (`core/i18n/translations.ts`, `| t` pipe), not `@angular/localize`.
+- Local dev: `scripts\dev.cmd` (Windows .cmd with CRLF; call `.\mvnw.cmd` with an explicit path).
 - Times stored as local `timestamp` in `Europe/Warsaw` (`talia.timezone`); sync accepts ISO with or without offset.
 
 ## Non-goals

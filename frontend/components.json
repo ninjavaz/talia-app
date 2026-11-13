@@ -1,0 +1,7 @@
+{
+  "componentsPath": "src/app/ui",
+  "buildable": false,
+  "generateAs": "entrypoint",
+  "importAlias": "@ui",
+  "style": "nova"
+}

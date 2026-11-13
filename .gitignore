@@ -19,3 +19,6 @@ Thumbs.db
 # Secrets
 .env
 *.env.local
+
+# Nx devkit cache left by the Spartan CLI
+.nx/
