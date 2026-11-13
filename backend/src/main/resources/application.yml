@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: talia
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/talia}
+    username: ${DB_USER:talia}
+    password: ${DB_PASSWORD:talia}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  session:
+    timeout: 90d
+    jdbc:
+      initialize-schema: never
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: 90d
+      cookie:
+        name: TALIA_SESSION
+        http-only: true
+        secure: ${COOKIE_SECURE:true}
+        same-site: strict
+        max-age: 90d
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+talia:
+  timezone: Europe/Warsaw
+  auth:
+    username: ${TALIA_USERNAME}
+    # DelegatingPasswordEncoder format, e.g. {bcrypt}$2a$14$...
+    password-hash: ${TALIA_PASSWORD_HASH}
+  sync:
+    # hex SHA-256 of the token configured in the iOS Shortcut
+    token-sha256: ${TALIA_SYNC_TOKEN_SHA256}

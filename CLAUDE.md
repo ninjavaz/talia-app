@@ -28,6 +28,17 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - Returns counts of inserted/updated
 - Integration tests with Testcontainers
 
+## Decisions (agreed 2026-11-13)
+- **Spring Boot 4.1 + Java 25** (overrides "Boot 3 / Java 21" above). Maven wrapper in `backend/`.
+- Single user; credentials from env: `TALIA_USERNAME`, `TALIA_PASSWORD_HASH` (DelegatingPasswordEncoder, e.g. `{bcrypt}$2a$...`),
+  `TALIA_SYNC_TOKEN_SHA256` (hex). No user/token tables. Session: spring-session-jdbc, 90 days, cookie SameSite=Strict (CSRF defense, CSRF tokens disabled).
+- Weekly workout goal = one number (walks don't count toward it); workouts get a category (GYM/PILATES/WALK/OTHER) derived from the Health type name (PL+EN keywords).
+- Goals, thresholds and habits are **configurable in the UI** (`app_settings` single row + `habit` table).
+- **AI summary postponed to v2** – UI shows a "coming soon" card. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
+- Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
+- **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).
+- Times stored as local `timestamp` in `Europe/Warsaw` (`talia.timezone`); sync accepts ISO with or without offset.
+
 ## Non-goals
 Calorie counting, recipes, multi-user, social features, native iOS app, photo analysis.
 Later maybe: pill-break marking, food ideas, native iOS app.
