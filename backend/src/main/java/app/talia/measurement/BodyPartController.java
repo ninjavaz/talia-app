@@ -1,10 +1,12 @@
 package app.talia.measurement;
 
+import app.talia.auth.TaliaUser;
 import app.talia.measurement.BodyPartService.BodyPart;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,24 +33,25 @@ class BodyPartController {
     }
 
     @GetMapping
-    List<BodyPart> list() {
-        return service.list();
+    List<BodyPart> list(@AuthenticationPrincipal TaliaUser user) {
+        return service.list(user.id());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    BodyPart create(@Valid @RequestBody BodyPartRequest body) {
-        return service.create(body.name());
+    BodyPart create(@AuthenticationPrincipal TaliaUser user, @Valid @RequestBody BodyPartRequest body) {
+        return service.create(user.id(), body.name());
     }
 
     @PutMapping("/{id}")
-    BodyPart rename(@PathVariable long id, @Valid @RequestBody BodyPartRequest body) {
-        return service.rename(id, body.name());
+    BodyPart rename(@AuthenticationPrincipal TaliaUser user, @PathVariable long id,
+                    @Valid @RequestBody BodyPartRequest body) {
+        return service.rename(user.id(), id, body.name());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void delete(@PathVariable long id) {
-        service.delete(id);
+    void delete(@AuthenticationPrincipal TaliaUser user, @PathVariable long id) {
+        service.delete(user.id(), id);
     }
 }

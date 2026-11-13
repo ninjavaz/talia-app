@@ -1,6 +1,8 @@
 package app.talia.sync;
 
+import app.talia.auth.SyncPrincipal;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,7 +17,8 @@ class HealthSyncController {
     }
 
     @PostMapping("/api/health-sync")
-    HealthSyncResponse sync(@Valid @RequestBody HealthSyncRequest request) {
-        return service.sync(request);
+    HealthSyncResponse sync(@AuthenticationPrincipal SyncPrincipal principal,
+                            @Valid @RequestBody HealthSyncRequest request) {
+        return service.sync(principal.userId(), request);
     }
 }

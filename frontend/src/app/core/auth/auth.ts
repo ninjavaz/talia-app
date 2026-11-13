@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpInterceptorFn } from '@angular/commo
 import { Injectable, inject, signal } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { catchError, firstValueFrom, throwError } from 'rxjs';
+import { PowChallenge, solveProofOfWork } from './proof-of-work';
 
 interface Me {
   username: string;
@@ -29,6 +30,19 @@ export class Auth {
 
   async login(username: string, password: string): Promise<void> {
     const me = await firstValueFrom(this.http.post<Me>('/api/auth/login', { username, password }));
+    this.user.set(me.username);
+  }
+
+  /**
+   * Creates an account. Fetches a proof-of-work challenge, solves it in the browser (bot check) and registers;
+   * the server logs the new user in right away. `website` is the honeypot field - always empty for people.
+   */
+  async register(username: string, password: string, website: string): Promise<void> {
+    const challenge = await firstValueFrom(this.http.get<PowChallenge>('/api/auth/challenge'));
+    const proof = await solveProofOfWork(challenge);
+    const me = await firstValueFrom(
+      this.http.post<Me>('/api/auth/register', { username, password, proof, website }),
+    );
     this.user.set(me.username);
   }
 

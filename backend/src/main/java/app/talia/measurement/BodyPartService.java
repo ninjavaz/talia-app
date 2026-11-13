@@ -22,49 +22,56 @@ class BodyPartService {
         this.jdbc = jdbc;
     }
 
-    List<BodyPart> list() {
-        return jdbc.sql("SELECT id, name, code, sort_order FROM body_part WHERE active ORDER BY sort_order, id")
+    List<BodyPart> list(long userId) {
+        return jdbc.sql("""
+                        SELECT id, name, code, sort_order FROM body_part
+                        WHERE user_id = :user AND active ORDER BY sort_order, id
+                        """)
+                .param("user", userId)
                 .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)))
                 .list();
     }
 
-    BodyPart create(String name) {
+    BodyPart create(long userId, String name) {
         long id = jdbc.sql("""
-                        INSERT INTO body_part (name, sort_order)
-                        VALUES (:name, (SELECT COALESCE(max(sort_order), 0) + 1 FROM body_part WHERE active))
+                        INSERT INTO body_part (user_id, name, sort_order)
+                        VALUES (:user, :name,
+                                (SELECT COALESCE(max(sort_order), 0) + 1 FROM body_part WHERE user_id = :user AND active))
                         RETURNING id
                         """)
+                .param("user", userId)
                 .param("name", name.trim())
                 .query(Long.class)
                 .single();
-        return find(id);
+        return find(userId, id);
     }
 
-    BodyPart rename(long id, String name) {
-        if (jdbc.sql("UPDATE body_part SET name = :name WHERE id = :id AND active")
-                .param("name", name.trim()).param("id", id).update() == 0) {
+    BodyPart rename(long userId, long id, String name) {
+        if (jdbc.sql("UPDATE body_part SET name = :name WHERE id = :id AND user_id = :user AND active")
+                .param("name", name.trim()).param("id", id).param("user", userId).update() == 0) {
             throw new NotFoundException("Body part not found");
         }
-        return find(id);
+        return find(userId, id);
     }
 
     /** Soft delete: past measurements stay in the database but are no longer shown. */
-    void delete(long id) {
-        BodyPart part = find(id);
+    void delete(long userId, long id) {
+        BodyPart part = find(userId, id);
         if (WAIST.equals(part.code())) {
             throw new BadRequestException("The waist measurement cannot be deleted");
         }
-        jdbc.sql("UPDATE body_part SET active = FALSE WHERE id = :id").param("id", id).update();
+        jdbc.sql("UPDATE body_part SET active = FALSE WHERE id = :id AND user_id = :user")
+                .param("id", id).param("user", userId).update();
     }
 
-    boolean isActive(long id) {
-        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM body_part WHERE id = :id AND active)")
-                .param("id", id).query(Boolean.class).single();
+    boolean isActive(long userId, long id) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM body_part WHERE id = :id AND user_id = :user AND active)")
+                .param("id", id).param("user", userId).query(Boolean.class).single();
     }
 
-    private BodyPart find(long id) {
-        return jdbc.sql("SELECT id, name, code, sort_order FROM body_part WHERE id = :id AND active")
-                .param("id", id)
+    private BodyPart find(long userId, long id) {
+        return jdbc.sql("SELECT id, name, code, sort_order FROM body_part WHERE id = :id AND user_id = :user AND active")
+                .param("id", id).param("user", userId)
                 .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)))
                 .optional()
                 .orElseThrow(() -> new NotFoundException("Body part not found"));

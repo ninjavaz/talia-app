@@ -1,6 +1,8 @@
 package app.talia.settings;
 
+import app.talia.auth.TaliaUser;
 import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,12 +20,12 @@ class SettingsController {
     }
 
     @GetMapping
-    AppSettings get() {
-        return settings.get();
+    AppSettings get(@AuthenticationPrincipal TaliaUser user) {
+        return settings.get(user.id());
     }
 
     @PutMapping
-    AppSettings update(@Valid @RequestBody AppSettings body) {
-        return settings.update(body);
+    AppSettings update(@AuthenticationPrincipal TaliaUser user, @Valid @RequestBody AppSettings body) {
+        return settings.update(user.id(), body);
     }
 }

@@ -30,8 +30,15 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 
 ## Decisions (agreed 2026-11-13)
 - **Spring Boot 4.1 + Java 25** (overrides "Boot 3 / Java 21" above). Maven wrapper in `backend/`.
-- Single user; credentials from env: `TALIA_USERNAME`, `TALIA_PASSWORD_HASH` (DelegatingPasswordEncoder, e.g. `{bcrypt}$2a$...`),
-  `TALIA_SYNC_TOKEN_SHA256` (hex). No user/token tables. Session: spring-session-jdbc, 90 days, cookie SameSite=Strict (CSRF defense, CSRF tokens disabled).
+- **Multi-user (2026-11-13, overrides "single user" above)**: open registration in the app, every table has `user_id`
+  (or belongs to a user's body_part/habit) and **every query filters by the logged-in user** (`@AuthenticationPrincipal TaliaUser`).
+  Foreign ids behave like missing ones (404/400). `DataIsolationIntegrationTest` guards this - extend it for new endpoints.
+- Security: bcrypt cost 12; password min 10 chars, max 72 bytes, small deny-list; usernames lowercase `[a-z0-9._-]{3,30}`.
+  Registration bot check = self-hosted proof of work (ALTCHA format, `ProofOfWork`) + honeypot `website` + per-IP limits.
+  Login throttling per IP and per username (429 + Retry-After). Session: spring-session-jdbc, 365 days sliding,
+  cookie defined in `SessionCookieConfig` (HttpOnly, Secure, SameSite=Strict = CSRF defense); `/api/auth/me`
+  re-issues it on every app start. Per-user Apple Health sync token: random 256 bit, only SHA-256 stored, shown once.
+- Migrations were squashed into a single V1 before the first deployment (no deployed DB existed).
 - Weekly workout goal = one number; **all workouts of the week count** (also walks). Workouts get a category
   (GYM/PILATES/WALK/OTHER) derived from the Health type name (PL+EN keywords) or chosen when added manually.
 - **Manual-first (2026-11-13)**: once a week (Sunday) a *check-in* with waist, weight and the week's **average daily steps**

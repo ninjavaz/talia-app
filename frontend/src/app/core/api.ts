@@ -162,6 +162,11 @@ export class Api {
     return firstValueFrom(this.http.delete(`/api/body-parts/${id}`));
   }
 
+  /** New personal Apple Health sync token; the server returns it only this once. */
+  newSyncToken(): Promise<{ token: string }> {
+    return firstValueFrom(this.http.post<{ token: string }>('/api/auth/sync-token', null));
+  }
+
   saveSettings(body: Settings): Promise<Settings> {
     return firstValueFrom(this.http.put<Settings>('/api/settings', body));
   }

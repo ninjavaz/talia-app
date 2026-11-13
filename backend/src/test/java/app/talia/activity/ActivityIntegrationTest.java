@@ -66,7 +66,7 @@ class ActivityIntegrationTest extends IntegrationTest {
 
     @Test
     void weeklyStepsComeFromCheckinOrSyncedDays() throws Exception {
-        jdbc.sql("INSERT INTO daily_steps (day, steps) VALUES ('2026-11-10', 6000), ('2026-11-11', 8000)").update();
+        jdbc.sql("INSERT INTO daily_steps (user_id, day, steps) VALUES (1, '2026-11-10', 6000), (1, '2026-11-11', 8000)").update();
         mvc.perform(get("/api/week").with(asUser())).andExpect(jsonPath("$.avgDailySteps").value(7000));
 
         mvc.perform(put("/api/checkins").with(asUser()).contentType(MediaType.APPLICATION_JSON)

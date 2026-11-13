@@ -10,7 +10,8 @@ spring:
     hibernate:
       ddl-auto: validate
   session:
-    timeout: 90d
+    # sliding: every request extends it, and the app re-issues the cookie on start (see AuthController.me)
+    timeout: 365d
     jdbc:
       initialize-schema: never
   mvc:
@@ -21,13 +22,8 @@ server:
   forward-headers-strategy: framework
   servlet:
     session:
-      timeout: 90d
-      cookie:
-        name: TALIA_SESSION
-        http-only: true
-        secure: ${COOKIE_SECURE:true}
-        same-site: strict
-        max-age: 90d
+      timeout: 365d
+      # the session cookie itself is defined in SessionCookieConfig
 
 management:
   endpoints:
@@ -37,10 +33,17 @@ management:
 
 talia:
   timezone: Europe/Warsaw
-  auth:
-    username: ${TALIA_USERNAME}
-    # DelegatingPasswordEncoder format, e.g. {bcrypt}$2a$14$...
-    password-hash: ${TALIA_PASSWORD_HASH}
-  sync:
-    # hex SHA-256 of the token configured in the iOS Shortcut
-    token-sha256: ${TALIA_SYNC_TOKEN_SHA256}
+  security:
+    # failed logins: per IP and per username within the window, then 429 until the window passes
+    login-max-failures-per-ip: 20
+    login-max-failures-per-user: 8
+    login-window: 15m
+    # registration and proof-of-work challenges per IP
+    registrations-per-ip: 5
+    registration-window: 1h
+    challenges-per-ip: 60
+    # proof-of-work difficulty: the client tries on average half of this many SHA-256 hashes
+    pow-max-number: 100000
+    pow-ttl: 10m
+    # session cookie only over HTTPS; false only for local http development
+    cookie-secure: ${COOKIE_SECURE:true}

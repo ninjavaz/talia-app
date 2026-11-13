@@ -1,6 +1,6 @@
 # Local development settings (profile "dev"), used by `.\mvnw.cmd` / `spring-boot:run`.
 # Lives in ./config so Spring Boot picks it up from the working directory, but it is NOT packaged into the jar.
-# Database: compose.dev.yml (start with scripts\db-start.cmd).
+# Database: compose.dev.yml (start with scripts\db-start.cmd). Accounts are created in the app.
 
 spring:
   datasource:
@@ -8,16 +8,8 @@ spring:
     username: talia
     password: talia
 
-server:
-  servlet:
-    session:
-      cookie:
-        secure: false
-
 talia:
-  auth:
-    username: talia
-    password-hash: "{noop}talia"
-  sync:
-    # sha256("test-token")
-    token-sha256: 4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e
+  security:
+    cookie-secure: false
+    # easier local testing
+    pow-max-number: 20000

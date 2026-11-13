@@ -1,13 +1,5 @@
-server:
-  servlet:
-    session:
-      cookie:
-        secure: false
-
 talia:
-  auth:
-    username: talia
-    password-hash: "{noop}talia"
-  sync:
-    # sha256("test-token")
-    token-sha256: 4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e
+  security:
+    cookie-secure: false
+    pow-max-number: 2000
+    registrations-per-ip: 3

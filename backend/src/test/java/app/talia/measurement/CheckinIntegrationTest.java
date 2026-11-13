@@ -155,7 +155,7 @@ class CheckinIntegrationTest extends IntegrationTest {
                 {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 78.5}], "weightKg": 64.2,
                  "avgDailySteps": 8100}
                 """).andExpect(status().isOk());
-        jdbc.sql("INSERT INTO weight_entry (measured_at, value_kg, source) VALUES ('2026-11-12 07:10', 64.4, 'HEALTH')")
+        jdbc.sql("INSERT INTO weight_entry (user_id, measured_at, value_kg, source) VALUES (1, '2026-11-12 07:10', 64.4, 'HEALTH')")
                 .update();
 
         mvc.perform(delete("/api/checkins/2026-11-11").with(asUser())).andExpect(status().isNoContent());

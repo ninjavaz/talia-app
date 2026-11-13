@@ -1,5 +1,7 @@
 package app.talia;
 
+import app.talia.auth.TaliaUser;
+import app.talia.auth.UserAccounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
@@ -19,12 +22,15 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 /**
  * Base class: full Spring context against a real Postgres (shared container via the cached context).
  * "Now" is fixed to {@link #NOW}: Sunday 15 Nov 2026, 10:00 in Warsaw (week Mon 9 - Sun 15 Nov).
+ * <p>
+ * Every test starts with one account "talia" (id 1, password {@link #PASSWORD}) that has the built-in waist
+ * (body part 1), three habits (ids 1-3) and the sync token {@link #SYNC_TOKEN}.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -33,6 +39,10 @@ public abstract class IntegrationTest {
 
     protected static final ZonedDateTime NOW = ZonedDateTime.of(2026, 11, 15, 10, 0, 0, 0, ZoneId.of("Europe/Warsaw"));
     protected static final LocalDate TODAY = NOW.toLocalDate();
+    protected static final String PASSWORD = "Tajne-Haslo-2026";
+    /** Personal Apple Health sync token of "talia" (only its SHA-256 is stored). */
+    protected static final String SYNC_TOKEN = "test-sync-token-0123456789abcdef";
+    private static final String SYNC_TOKEN_SHA256 = "5b1174601e24c09eb56960e451d74c7d37a202860af36003bd6c7b4b7ecb69ce";
 
     @TestConfiguration(proxyBeanMethods = false)
     static class FixedClock {
@@ -49,30 +59,40 @@ public abstract class IntegrationTest {
     @Autowired
     protected JdbcClient jdbc;
 
+    @Autowired
+    protected UserAccounts accounts;
+
     protected MockMvc mvc;
+    protected TaliaUser talia;
 
     @BeforeEach
     void setUpMockMvcAndCleanData() {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+        // deleting the users cascades to all their data
+        jdbc.sql("TRUNCATE app_user, spring_session RESTART IDENTITY CASCADE").update();
+        talia = accounts.create("talia", PASSWORD);
+        jdbc.sql("UPDATE app_user SET sync_token_hash = :hash WHERE id = :id")
+                .param("hash", SYNC_TOKEN_SHA256).param("id", talia.id()).update();
         jdbc.sql("""
-                TRUNCATE daily_steps, weekly_steps, weight_entry, body_part, body_measurement, workout, sync_log,
-                         habit, habit_check
-                RESTART IDENTITY CASCADE
-                """).update();
-        // body part 1 = built-in waist
-        jdbc.sql("INSERT INTO body_part (name, code, sort_order) VALUES ('Talia', 'WAIST', 0)").update();
-        jdbc.sql("""
-                INSERT INTO habit (name, sort_order) VALUES
-                    ('Białko w posiłkach', 1), ('Warzywa do 2 posiłków', 2), ('Bez słodkich napojów', 3)
-                """).update();
-        jdbc.sql("""
-                UPDATE app_settings SET weekly_workout_goal = 3, daily_steps_goal = 8000,
-                    habit_week_threshold_pct = 70, language = 'pl'
-                """).update();
+                INSERT INTO habit (user_id, name, sort_order) VALUES
+                    (:id, 'Białko w posiłkach', 1), (:id, 'Warzywa do 2 posiłków', 2), (:id, 'Bez słodkich napojów', 3)
+                """).param("id", talia.id()).update();
     }
 
-    /** Logged-in user for MockMvc requests. */
-    protected static RequestPostProcessor asUser() {
-        return user("talia").roles("USER");
+    /** Requests as the default user "talia". */
+    protected RequestPostProcessor asUser() {
+        return as(talia);
+    }
+
+    protected static RequestPostProcessor as(TaliaUser user) {
+        return authentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+    }
+
+    /** Simulates a request from the given client IP (rate limits are per IP and kept across tests). */
+    protected static RequestPostProcessor fromIp(String ip) {
+        return request -> {
+            request.setRemoteAddr(ip);
+            return request;
+        };
     }
 }

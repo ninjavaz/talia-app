@@ -15,7 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class HealthSyncIntegrationTest extends IntegrationTest {
 
-    private static final String TOKEN = "test-token";
+    private static final String TOKEN = SYNC_TOKEN;
 
     private static final String FULL_PAYLOAD = """
             {

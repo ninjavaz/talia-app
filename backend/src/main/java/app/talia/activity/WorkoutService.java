@@ -31,11 +31,12 @@ public class WorkoutService {
         this.clock = clock;
     }
 
-    public List<Workout> between(LocalDate from, LocalDate to) {
+    public List<Workout> between(long userId, LocalDate from, LocalDate to) {
         return jdbc.sql("""
                         SELECT id, started_at, ended_at, type, category, kcal FROM workout
-                        WHERE started_at >= :from AND started_at < :next ORDER BY started_at
+                        WHERE user_id = :user AND started_at >= :from AND started_at < :next ORDER BY started_at
                         """)
+                .param("user", userId)
                 .param("from", from.atStartOfDay())
                 .param("next", to.plusDays(1).atStartOfDay())
                 .query((rs, n) -> {
@@ -49,9 +50,9 @@ public class WorkoutService {
 
     /**
      * Manual workout. Only the day matters to the user; the start time is "now" for today and noon for past days,
-     * shifted by a minute if a workout of the same type already starts then (unique key start+type).
+     * shifted by a minute if a workout of the same type already starts then (unique key user+start+type).
      */
-    Workout add(LocalDate date, WorkoutCategory category, int durationMin) {
+    Workout add(long userId, LocalDate date, WorkoutCategory category, int durationMin) {
         LocalDate today = LocalDate.now(clock);
         if (date.isAfter(today)) {
             throw new BadRequestException("Date is in the future");
@@ -62,11 +63,12 @@ public class WorkoutService {
         LocalDateTime start = date.atTime(time);
         for (int attempt = 0; attempt < 60; attempt++, start = start.plusMinutes(1)) {
             var id = jdbc.sql("""
-                            INSERT INTO workout (started_at, ended_at, type, category)
-                            VALUES (:start, :end, :type, :category)
-                            ON CONFLICT (started_at, type) DO NOTHING
+                            INSERT INTO workout (user_id, started_at, ended_at, type, category)
+                            VALUES (:user, :start, :end, :type, :category)
+                            ON CONFLICT (user_id, started_at, type) DO NOTHING
                             RETURNING id
                             """)
+                    .param("user", userId)
                     .param("start", start)
                     .param("end", start.plusMinutes(durationMin))
                     .param("type", category.name())
@@ -80,8 +82,9 @@ public class WorkoutService {
         throw new BadRequestException("Too many workouts of this type on that day");
     }
 
-    void delete(long id) {
-        if (jdbc.sql("DELETE FROM workout WHERE id = :id").param("id", id).update() == 0) {
+    void delete(long userId, long id) {
+        if (jdbc.sql("DELETE FROM workout WHERE id = :id AND user_id = :user")
+                .param("id", id).param("user", userId).update() == 0) {
             throw new NotFoundException("Workout not found");
         }
     }

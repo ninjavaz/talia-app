@@ -1,5 +1,6 @@
 package app.talia.habit;
 
+import app.talia.auth.TaliaUser;
 import app.talia.habit.HabitService.Habit;
 import app.talia.habit.HabitService.HabitDay;
 import app.talia.habit.HabitService.HabitStats;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,47 +41,51 @@ class HabitController {
     }
 
     @GetMapping
-    List<Habit> list() {
-        return service.list();
+    List<Habit> list(@AuthenticationPrincipal TaliaUser user) {
+        return service.list(user.id());
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    Habit create(@Valid @RequestBody HabitRequest body) {
-        return service.create(body.name());
+    Habit create(@AuthenticationPrincipal TaliaUser user, @Valid @RequestBody HabitRequest body) {
+        return service.create(user.id(), body.name());
     }
 
     @PutMapping("/{id}")
-    Habit rename(@PathVariable long id, @Valid @RequestBody HabitRequest body) {
-        return service.rename(id, body.name());
+    Habit rename(@AuthenticationPrincipal TaliaUser user, @PathVariable long id, @Valid @RequestBody HabitRequest body) {
+        return service.rename(user.id(), id, body.name());
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void delete(@PathVariable long id) {
-        service.delete(id);
+    void delete(@AuthenticationPrincipal TaliaUser user, @PathVariable long id) {
+        service.delete(user.id(), id);
     }
 
     /** Habits with their done flag for a day (default: today). */
     @GetMapping("/day")
-    List<HabitDay> day(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return service.day(date != null ? date : LocalDate.now(clock));
+    List<HabitDay> day(@AuthenticationPrincipal TaliaUser user,
+                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return service.day(user.id(), date != null ? date : LocalDate.now(clock));
     }
 
     @PutMapping("/{id}/checks/{date}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void check(@PathVariable long id, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        service.setDone(id, date, true);
+    void check(@AuthenticationPrincipal TaliaUser user, @PathVariable long id,
+               @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        service.setDone(user.id(), id, date, true);
     }
 
     @DeleteMapping("/{id}/checks/{date}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void uncheck(@PathVariable long id, @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        service.setDone(id, date, false);
+    void uncheck(@AuthenticationPrincipal TaliaUser user, @PathVariable long id,
+                 @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        service.setDone(user.id(), id, date, false);
     }
 
     @GetMapping("/stats")
-    HabitStats stats(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return service.stats(date != null ? date : LocalDate.now(clock));
+    HabitStats stats(@AuthenticationPrincipal TaliaUser user,
+                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return service.stats(user.id(), date != null ? date : LocalDate.now(clock));
     }
 }

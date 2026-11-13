@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 
 import java.util.Arrays;
 
-/** Local dev: runs the app against a throwaway Postgres container. Login: talia / talia, sync token: test-token. */
+/** Local dev: runs the app against a throwaway Postgres container (create an account in the app). */
 public class TestTaliaApplication {
 
 	public static void main(String[] args) {

@@ -20,23 +20,23 @@ import java.util.Optional;
 class HealthSyncService {
 
     private static final String UPSERT_STEPS = """
-            INSERT INTO daily_steps (day, steps) VALUES (:day, :steps)
-            ON CONFLICT (day) DO UPDATE SET steps = EXCLUDED.steps, updated_at = now()
+            INSERT INTO daily_steps (user_id, day, steps) VALUES (:user, :day, :steps)
+            ON CONFLICT (user_id, day) DO UPDATE SET steps = EXCLUDED.steps, updated_at = now()
             WHERE daily_steps.steps IS DISTINCT FROM EXCLUDED.steps
             RETURNING (xmax = 0)
             """;
 
     private static final String UPSERT_WEIGHT = """
-            INSERT INTO weight_entry (measured_at, value_kg, source) VALUES (:ts, :value, 'HEALTH')
-            ON CONFLICT (measured_at) DO UPDATE SET value_kg = EXCLUDED.value_kg, updated_at = now()
+            INSERT INTO weight_entry (user_id, measured_at, value_kg, source) VALUES (:user, :ts, :value, 'HEALTH')
+            ON CONFLICT (user_id, measured_at) DO UPDATE SET value_kg = EXCLUDED.value_kg, updated_at = now()
             WHERE weight_entry.value_kg IS DISTINCT FROM EXCLUDED.value_kg
             RETURNING (xmax = 0)
             """;
 
     private static final String UPSERT_WORKOUT = """
-            INSERT INTO workout (started_at, ended_at, type, category, kcal)
-            VALUES (:start, :end, :type, :category, :kcal)
-            ON CONFLICT (started_at, type) DO UPDATE
+            INSERT INTO workout (user_id, started_at, ended_at, type, category, kcal)
+            VALUES (:user, :start, :end, :type, :category, :kcal)
+            ON CONFLICT (user_id, started_at, type) DO UPDATE
                SET ended_at = EXCLUDED.ended_at, category = EXCLUDED.category, kcal = EXCLUDED.kcal, updated_at = now()
             WHERE (workout.ended_at, workout.category, workout.kcal)
                   IS DISTINCT FROM (EXCLUDED.ended_at, EXCLUDED.category, EXCLUDED.kcal)
@@ -52,16 +52,16 @@ class HealthSyncService {
     }
 
     @Transactional
-    HealthSyncResponse sync(HealthSyncRequest request) {
+    HealthSyncResponse sync(long userId, HealthSyncRequest request) {
         Tally steps = new Tally();
         for (var s : request.steps()) {
-            steps.add(upsert(jdbc.sql(UPSERT_STEPS).param("day", s.date()).param("steps", s.value())));
+            steps.add(upsert(jdbc.sql(UPSERT_STEPS).param("user", userId).param("day", s.date()).param("steps", s.value())));
         }
 
         Tally weight = new Tally();
         for (var w : request.weight()) {
             LocalDateTime ts = FlexibleDateTime.parse(w.ts(), zone);
-            weight.add(upsert(jdbc.sql(UPSERT_WEIGHT).param("ts", ts).param("value", w.value())));
+            weight.add(upsert(jdbc.sql(UPSERT_WEIGHT).param("user", userId).param("ts", ts).param("value", w.value())));
         }
 
         Tally workouts = new Tally();
@@ -73,6 +73,7 @@ class HealthSyncService {
             }
             String type = w.type().trim();
             workouts.add(upsert(jdbc.sql(UPSERT_WORKOUT)
+                    .param("user", userId)
                     .param("start", start)
                     .param("end", end)
                     .param("type", type)
@@ -80,7 +81,8 @@ class HealthSyncService {
                     .param("kcal", w.kcal())));
         }
 
-        jdbc.sql("INSERT INTO sync_log (inserted, updated) VALUES (:inserted, :updated)")
+        jdbc.sql("INSERT INTO sync_log (user_id, inserted, updated) VALUES (:user, :inserted, :updated)")
+                .param("user", userId)
                 .param("inserted", steps.inserted + weight.inserted + workouts.inserted)
                 .param("updated", steps.updated + weight.updated + workouts.updated)
                 .update();

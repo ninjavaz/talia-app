@@ -17,13 +17,15 @@ public class StepsQueries {
         this.jdbc = jdbc;
     }
 
-    public Optional<Integer> avgDailySteps(LocalDate anyDayOfWeek) {
+    public Optional<Integer> avgDailySteps(long userId, LocalDate anyDayOfWeek) {
         LocalDate start = Weeks.start(anyDayOfWeek);
         return jdbc.sql("""
                         SELECT COALESCE(
-                            (SELECT avg_daily_steps FROM weekly_steps WHERE week_start = :start),
-                            (SELECT round(avg(steps))::int FROM daily_steps WHERE day BETWEEN :start AND :end))
+                            (SELECT avg_daily_steps FROM weekly_steps WHERE user_id = :user AND week_start = :start),
+                            (SELECT round(avg(steps))::int FROM daily_steps
+                             WHERE user_id = :user AND day BETWEEN :start AND :end))
                         """)
+                .param("user", userId)
                 .param("start", start)
                 .param("end", start.plusDays(6))
                 .query(Integer.class)

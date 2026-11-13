@@ -126,6 +126,26 @@ import { Theme } from '../../core/theme/theme';
       <tl-segmented [options]="langOptions" [value]="i18n.lang()" (valueChange)="setLang($event)" />
     </tl-card>
 
+    <tl-section-header [title]="'settings.sync' | t" />
+    <tl-card>
+      <p class="text-muted-foreground text-sm">{{ 'settings.syncHint' | t }}</p>
+      <p class="mt-3 text-sm font-semibold">
+        {{ (syncStatusData()?.configured ? 'settings.syncConfigured' : 'settings.syncNone') | t }}
+      </p>
+      @if (newToken(); as token) {
+        <div class="bg-progress/15 mt-3 rounded-2xl p-3">
+          <code class="block font-mono text-sm break-all select-all">{{ token }}</code>
+          <p class="text-muted-foreground mt-2 text-xs">{{ 'settings.syncWarning' | t }}</p>
+          <button tlButton variant="secondary" class="mt-3 w-full" (click)="copyToken(token)">
+            {{ 'settings.syncCopy' | t }}
+          </button>
+        </div>
+      }
+      <button tlButton variant="secondary" class="mt-4 w-full" (click)="generateToken()">
+        {{ 'settings.syncGenerate' | t }}
+      </button>
+    </tl-card>
+
     <tl-section-header [title]="'settings.account' | t" />
     <tl-list>
       <button
@@ -157,6 +177,9 @@ export class SettingsPage {
   protected readonly bodyParts = httpResource<BodyPart[]>(() => '/api/body-parts');
   protected readonly bodyPartsData = safeValue(this.bodyParts);
   protected readonly newBodyPart = signal('');
+  protected readonly syncStatus = httpResource<{ configured: boolean }>(() => '/api/auth/sync-token');
+  protected readonly syncStatusData = safeValue(this.syncStatus);
+  protected readonly newToken = signal<string | null>(null);
   private readonly toast = inject(TlToast);
 
   protected readonly workoutGoal = signal('');
@@ -250,6 +273,27 @@ export class SettingsPage {
       (await this.attempt(() => this.api.deleteBodyPart(part.id), 'common.deleted'))
     ) {
       this.bodyParts.reload();
+    }
+  }
+
+  protected async generateToken(): Promise<void> {
+    if (this.syncStatusData()?.configured && !confirm(this.i18n.t('settings.syncConfirm'))) {
+      return;
+    }
+    try {
+      this.newToken.set((await this.api.newSyncToken()).token);
+      this.syncStatus.reload();
+    } catch {
+      this.toast.error(this.i18n.t('common.saveError'));
+    }
+  }
+
+  protected async copyToken(token: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(token);
+      this.toast.success(this.i18n.t('settings.syncCopied'));
+    } catch {
+      // clipboard not available: the token is selectable (select-all) for manual copying
     }
   }
 

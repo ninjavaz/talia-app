@@ -23,8 +23,7 @@ Skrypt otwiera dwa okna:
 | Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (najpierw sam startuje bazę), albo `cd backend` + `.\mvnw.cmd` |
 | Frontend | http://localhost:4200 | `scripts\dev-frontend.cmd` (`npm start`, `/api` przez proxy do :8080) |
 
-- Login: `talia` / `talia`
-- Token synchronizacji: `test-token`
+Konto zakładasz w aplikacji (zakładka „Załóż konto”). Osobisty token do synchronizacji z Apple Health generujesz w Ustawieniach.
 
 `.\mvnw.cmd` bez argumentów uruchamia backend z profilem `dev`. Ustawienia lokalne są w [backend/config/application-dev.yml](backend/config/application-dev.yml), który nie trafia do jara. Baza musi wtedy działać (`scripts\db-start.cmd`).
 
@@ -37,17 +36,16 @@ Lokalny Postgres 18 działa w Dockerze ([compose.dev.yml](compose.dev.yml)) na *
 | Skrypt | Co robi |
 |---|---|
 | `scripts\db-start.cmd` | startuje bazę i czeka, aż będzie gotowa |
-| `scripts\db-seed.cmd` | wgrywa dane testowe: 8 tygodni wagi, talii, kroków, treningów i nawyków ([seed-dev.sql](scripts/seed-dev.sql)); zastępuje istniejące pomiary |
 | `scripts\db-reset.cmd` | usuwa bazę razem z danymi (pyta o potwierdzenie) |
 
-Schemat tworzy Flyway przy starcie backendu, więc przed pierwszym `db-seed` uruchom raz backend. Pełny reset z danymi testowymi: `db-reset` → `dev-backend` → `db-seed`.
+Schemat tworzy Flyway przy starcie backendu. Pełny reset: `db-reset`, potem `dev-backend`.
 
 Alternatywa bez lokalnej bazy: [TestTaliaApplication](backend/src/test/java/app/talia/TestTaliaApplication.java) (uruchamiana z IDE) stawia tymczasowego Postgresa przez Testcontainers.
 
 Test synchronizacji:
 
 ```bash
-curl -H "Authorization: Bearer test-token" -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer <token z Ustawień>" -H "Content-Type: application/json" \
   -d '{"steps":[{"date":"2026-11-13","value":5321}]}' http://localhost:8080/api/health-sync
 ```
 

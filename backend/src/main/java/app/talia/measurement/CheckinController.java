@@ -1,11 +1,13 @@
 package app.talia.measurement;
 
+import app.talia.auth.TaliaUser;
 import app.talia.measurement.CheckinDtos.CheckinRequest;
 import app.talia.measurement.CheckinDtos.ProgressView;
 import app.talia.measurement.CheckinDtos.WeekEntry;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,24 +30,25 @@ class CheckinController {
     }
 
     @GetMapping("/api/progress")
-    ProgressView progress() {
-        return service.progress();
+    ProgressView progress(@AuthenticationPrincipal TaliaUser user) {
+        return service.progress(user.id());
     }
 
     @GetMapping("/api/checkins")
-    List<WeekEntry> history(@RequestParam(defaultValue = "26") int limit) {
-        return service.history(Math.clamp(limit, 1, 520));
+    List<WeekEntry> history(@AuthenticationPrincipal TaliaUser user, @RequestParam(defaultValue = "26") int limit) {
+        return service.history(user.id(), Math.clamp(limit, 1, 520));
     }
 
     /** Creates or replaces the check-in of the week containing {@code date}. */
     @PutMapping("/api/checkins")
-    WeekEntry save(@Valid @RequestBody CheckinRequest request) {
-        return service.save(request);
+    WeekEntry save(@AuthenticationPrincipal TaliaUser user, @Valid @RequestBody CheckinRequest request) {
+        return service.save(user.id(), request);
     }
 
     @DeleteMapping("/api/checkins/{weekDay}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    void delete(@PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekDay) {
-        service.deleteWeek(weekDay);
+    void delete(@AuthenticationPrincipal TaliaUser user,
+                @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekDay) {
+        service.deleteWeek(user.id(), weekDay);
     }
 }
