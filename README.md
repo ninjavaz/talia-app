@@ -20,13 +20,25 @@ Skrypt otwiera dwa okna:
 
 | | Adres | Skrypt |
 |---|---|---|
-| Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (`mvnw spring-boot:test-run`) |
+| Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (najpierw sam startuje bazę) |
 | Frontend | http://localhost:4200 | `scripts\dev-frontend.cmd` (`npm start`, `/api` przez proxy do :8080) |
-
-Backend sam stawia tymczasowego Postgresa w Dockerze (Testcontainers), więc nie trzeba niczego instalować ani konfigurować. Dane znikają po zamknięciu backendu.
 
 - Login: `talia` / `talia`
 - Token synchronizacji: `test-token`
+
+### Baza danych
+
+Lokalny Postgres 18 działa w Dockerze ([compose.dev.yml](compose.dev.yml)) na **localhost:5433**, baza `talia`, user `talia` / `talia` (np. do DBeavera). Dane są w wolumenie Dockera, więc przetrwają restart.
+
+| Skrypt | Co robi |
+|---|---|
+| `scripts\db-start.cmd` | startuje bazę i czeka, aż będzie gotowa |
+| `scripts\db-seed.cmd` | wgrywa dane testowe: 8 tygodni wagi, talii, kroków, treningów i nawyków ([seed-dev.sql](scripts/seed-dev.sql)); zastępuje istniejące pomiary |
+| `scripts\db-reset.cmd` | usuwa bazę razem z danymi (pyta o potwierdzenie) |
+
+Schemat tworzy Flyway przy starcie backendu, więc przed pierwszym `db-seed` uruchom raz backend. Pełny reset z danymi testowymi: `db-reset` → `dev-backend` → `db-seed`.
+
+Alternatywa bez lokalnej bazy: [TestTaliaApplication](backend/src/test/java/app/talia/TestTaliaApplication.java) (uruchamiana z IDE) stawia tymczasowego Postgresa przez Testcontainers.
 
 Test synchronizacji:
 
