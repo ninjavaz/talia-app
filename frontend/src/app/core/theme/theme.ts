@@ -3,7 +3,7 @@ import { DOCUMENT, Injectable, computed, effect, inject, signal } from '@angular
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 const STORAGE_KEY = 'talia.theme';
-const THEME_COLORS = { light: '#ffffff', dark: '#0a0a0a' };
+const THEME_COLORS = { light: '#f6f3ef', dark: '#1b1918' };
 
 /** Light/dark theme: follows the system by default, can be forced per device. Toggles `.dark` on <html>. */
 @Injectable({ providedIn: 'root' })

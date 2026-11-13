@@ -38,8 +38,11 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
 - **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).
 - **Frontend**: Angular 22 (zoneless, standalone, signals), Tailwind 4 via postcss, **Spartan UI** like the cook-less project
-  (brain from npm, helm components generated into `frontend/src/app/ui`, alias `@ui/*`, style `nova`; add more with
-  `npx ng g @spartan-ng/cli:ui <name>`). **No Nx**, plain Angular CLI. Brand pink is `--primary` in `styles.css`.
+  (brain from npm, helm generated into `frontend/projects/ui/helm`, alias `@ui/*`, style `nova`). **No Nx**, plain Angular CLI.
+- **Design system = library `frontend/projects/ui` (`@talia/ui`, prefix `tl-`)**, path-mapped to source. Visual style inspired by
+  a calm wellness app: cream background, white rounded cards, charcoal header bands, sage green progress rings, floating dark
+  pill bottom nav, Montserrat (self-hosted via @fontsource). Tokens in `src/styles.css` (`--panel`, `--chip`, `--track`,
+  `--progress`, `--nav`...). Build screens from `tl-*` components; living style guide at route `/ui`.
   i18n: own signal-based dictionary (`core/i18n/translations.ts`, `| t` pipe), not `@angular/localize`.
 - Local dev: `scripts\dev.cmd` (Windows .cmd with CRLF; call `.\mvnw.cmd` with an explicit path).
 - Times stored as local `timestamp` in `Europe/Warsaw` (`talia.timezone`); sync accepts ISO with or without offset.

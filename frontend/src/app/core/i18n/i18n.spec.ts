@@ -14,7 +14,7 @@ describe('I18n', () => {
   it('switches language and interpolates params', () => {
     const i18n = TestBed.inject(I18n);
     i18n.setLang('en');
-    expect(i18n.t('week.workouts', { done: 2, goal: 3 })).toBe('Workouts: 2 of 3');
+    expect(i18n.t('week.of', { goal: 3 })).toBe('of 3');
     expect(localStorage.getItem('talia.lang')).toBe('en');
   });
 

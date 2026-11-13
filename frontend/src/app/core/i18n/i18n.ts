@@ -1,5 +1,5 @@
-import { DOCUMENT, Injectable, Pipe, PipeTransform, effect, inject, signal } from '@angular/core';
-import { LANGS, Lang, TRANSLATIONS, TranslationKey } from './translations';
+import { DOCUMENT, Injectable, Pipe, PipeTransform, computed, effect, inject, signal } from '@angular/core';
+import { LANGS, LOCALES, Lang, TRANSLATIONS, TranslationKey } from './translations';
 
 const STORAGE_KEY = 'talia.lang';
 
@@ -12,6 +12,14 @@ export class I18n {
   private readonly document = inject(DOCUMENT);
 
   readonly lang = signal<Lang>(readStoredLang());
+  readonly locale = computed(() => LOCALES[this.lang()]);
+
+  /** "piątek, 13.11" / "Friday 13/11" */
+  readonly today = computed(() =>
+    new Intl.DateTimeFormat(this.locale(), { weekday: 'long', day: '2-digit', month: '2-digit' }).format(
+      new Date(),
+    ),
+  );
 
   constructor() {
     effect(() => {

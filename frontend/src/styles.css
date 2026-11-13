@@ -4,100 +4,117 @@
 @import 'tailwindcss/utilities.css';
 
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
-/* You can add global styles to this file, and also import other style files */
+@import '@fontsource-variable/montserrat/wght.css';
 
+/*
+ * Talia design tokens: warm cream background, white cards, charcoal header bands,
+ * sage green for progress. Spartan tokens (background, card, primary...) are mapped by the preset;
+ * Talia-specific ones are exposed to Tailwind in the @theme block below (bg-panel, text-progress...).
+ */
 :root {
   color-scheme: light;
 
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    'Montserrat Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.6 0.19 2);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.6 0.19 2 / 60%);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0.875rem;
+
+  --background: #f6f3ef;
+  --foreground: #2a2725;
+  --card: #ffffff;
+  --card-foreground: #2a2725;
+  --popover: #ffffff;
+  --popover-foreground: #2a2725;
+  --primary: #2e2b29;
+  --primary-foreground: #ffffff;
+  --secondary: #f1ece5;
+  --secondary-foreground: #2a2725;
+  --muted: #f1ece5;
+  --muted-foreground: #8c857e;
+  --accent: #f1ece5;
+  --accent-foreground: #2a2725;
+  --destructive: #c4513f;
+  --border: #ece7e1;
+  --input: #e4ded6;
+  --ring: #a3b98b;
+
+  /* Talia */
+  --panel: #2e2b29;
+  --panel-foreground: #ffffff;
+  --chip: #f1ece5;
+  --chip-foreground: #2a2725;
+  --track: #e9e4dd;
+  --progress: #a3b98b;
+  --success: #5e8c4a;
+  --nav: #2e2b29;
+  --nav-foreground: #a9a29a;
+  --nav-active: #ffffff;
+
+  --chart-1: #a3b98b;
+  --chart-2: #c9c2b9;
 }
 
 :root.dark {
   color-scheme: dark;
 
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.7 0.17 2);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.17 2 / 60%);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #1b1918;
+  --foreground: #f3efea;
+  --card: #262321;
+  --card-foreground: #f3efea;
+  --popover: #262321;
+  --popover-foreground: #f3efea;
+  --primary: #ede7df;
+  --primary-foreground: #2a2725;
+  --secondary: #34302d;
+  --secondary-foreground: #f3efea;
+  --muted: #2f2b29;
+  --muted-foreground: #a39c94;
+  --accent: #34302d;
+  --accent-foreground: #f3efea;
+  --destructive: #e07a68;
+  --border: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: #a3b98b;
+
+  --panel: #34302d;
+  --panel-foreground: #f3efea;
+  --chip: #34302d;
+  --chip-foreground: #f3efea;
+  --track: #3a3633;
+  --progress: #a3b98b;
+  --success: #9cc285;
+  --nav: #2c2927;
+  --nav-foreground: #8f8880;
+  --nav-active: #ffffff;
+
+  --chart-1: #a3b98b;
+  --chart-2: #5a544f;
+}
+
+@theme inline {
+  --color-panel: var(--panel);
+  --color-panel-foreground: var(--panel-foreground);
+  --color-chip: var(--chip);
+  --color-chip-foreground: var(--chip-foreground);
+  --color-track: var(--track);
+  --color-progress: var(--progress);
+  --color-success: var(--success);
+  --color-nav: var(--nav);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-active: var(--nav-active);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
-}
-
-/* Talia: iOS PWA niceties */
-html {
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-body {
-  min-height: 100dvh;
-  overscroll-behavior-y: none;
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    min-height: 100dvh;
+    overscroll-behavior-y: none;
+  }
 }

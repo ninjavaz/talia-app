@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login').then((m) => m.LoginPage),
   },
   {
+    path: 'ui',
+    loadComponent: () =>
+      import('./features/ui-showcase/ui-showcase').then((m) => m.UiShowcasePage),
+  },
+  {
     path: '',
     component: Shell,
     canActivate: [authGuard],

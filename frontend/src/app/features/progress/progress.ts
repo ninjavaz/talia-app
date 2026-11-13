@@ -1,52 +1,82 @@
-import { Component } from '@angular/core';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePlus } from '@ng-icons/lucide';
-import { HlmButtonImports } from '@ui/button';
-import { HlmCardImports } from '@ui/card';
-import { HlmSeparatorImports } from '@ui/separator';
-import { TranslatePipe } from '../../core/i18n/i18n';
+import { Component, inject } from '@angular/core';
+import { NgIcon } from '@ng-icons/core';
+import {
+  TlCard,
+  TlList,
+  TlListItem,
+  TlPageHeader,
+  TlPanel,
+  TlRing,
+  TlRoundButton,
+  TlSectionHeader,
+  TlStat,
+} from '@talia/ui';
+import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 
-/** Waist + weight trend overview. Data comes with the measurements API (next step). */
+/** Waist + weight trend overview. Values arrive with the measurements API (next step). */
 @Component({
   selector: 'app-progress',
-  imports: [HlmButtonImports, HlmCardImports, HlmSeparatorImports, NgIcon, TranslatePipe],
-  viewProviders: [provideIcons({ lucidePlus })],
+  imports: [
+    NgIcon,
+    TlCard,
+    TlList,
+    TlListItem,
+    TlPageHeader,
+    TlPanel,
+    TlRing,
+    TlRoundButton,
+    TlSectionHeader,
+    TlStat,
+    TranslatePipe,
+  ],
   template: `
-    <h1 class="mb-4 text-2xl font-bold">{{ 'progress.title' | t }}</h1>
+    <tl-page-header [title]="i18n.today()">
+      <button tlRoundButton disabled [attr.aria-label]="'progress.addWaist' | t">
+        <ng-icon name="lucidePlus" />
+      </button>
+    </tl-page-header>
 
-    <div class="grid grid-cols-2 gap-3">
-      <section hlmCard size="sm" class="bg-primary/5 ring-primary/15">
-        <div hlmCardContent class="flex flex-col gap-1">
-          <span class="text-muted-foreground text-xs">{{ 'progress.waist' | t }}</span>
-          <span class="text-2xl font-semibold">—</span>
-          <span class="text-muted-foreground text-xs">{{ 'progress.noData' | t }}</span>
+    <tl-panel [title]="'progress.panel' | t">
+      <div class="grid grid-cols-2">
+        <tl-stat value="—" [label]="'progress.waist' | t" [hint]="'common.noData' | t" />
+        <tl-stat value="—" [label]="'progress.weightTrend' | t" [hint]="'common.noData' | t" />
+      </div>
+      <div
+        class="border-border text-muted-foreground mt-5 flex h-36 items-center justify-center rounded-2xl border border-dashed px-6 text-center text-sm"
+      >
+        {{ 'progress.chartEmpty' | t }}
+      </div>
+    </tl-panel>
+
+    <tl-section-header [title]="'progress.today' | t" link="/week" />
+    <tl-card>
+      <div class="flex justify-around">
+        <div class="flex flex-col items-center gap-2">
+          <tl-ring [value]="0" [max]="8000" [size]="76"><span class="font-semibold">—</span></tl-ring>
+          <span class="text-muted-foreground text-xs">{{ 'progress.steps' | t }}</span>
         </div>
-      </section>
-      <section hlmCard size="sm" class="bg-primary/5 ring-primary/15">
-        <div hlmCardContent class="flex flex-col gap-1">
-          <span class="text-muted-foreground text-xs">{{ 'progress.weightTrend' | t }}</span>
-          <span class="text-2xl font-semibold">—</span>
-          <span class="text-muted-foreground text-xs">{{ 'progress.noData' | t }}</span>
+        <div class="flex flex-col items-center gap-2">
+          <tl-ring [value]="0" [max]="3" [size]="76"><span class="font-semibold">0/3</span></tl-ring>
+          <span class="text-muted-foreground text-xs">{{ 'progress.workouts' | t }}</span>
         </div>
-      </section>
-    </div>
+        <div class="flex flex-col items-center gap-2">
+          <tl-ring [value]="0" [max]="100" [size]="76"><span class="font-semibold">—</span></tl-ring>
+          <span class="text-muted-foreground text-xs">{{ 'progress.habits' | t }}</span>
+        </div>
+      </div>
+    </tl-card>
 
-    <div
-      class="text-muted-foreground my-5 flex h-44 items-center justify-center rounded-xl border border-dashed px-6 text-center text-sm"
-    >
-      {{ 'progress.chartEmpty' | t }}
-    </div>
-
-    <button hlmBtn size="lg" class="h-11 w-full text-base" disabled>
-      <ng-icon name="lucidePlus" />
-      {{ 'progress.addWaist' | t }}
-    </button>
-
-    <div class="mt-5 flex items-center justify-between py-2 text-sm">
-      <span>{{ 'progress.stepsToday' | t }}</span>
-      <span class="font-semibold">—</span>
-    </div>
-    <hlm-separator />
+    <tl-section-header [title]="'progress.measurements' | t" />
+    <tl-list>
+      <tl-list-item icon="lucideRuler" [title]="'progress.waist' | t" [subtitle]="'progress.waistHint' | t">
+        <button tlListTrailing tlRoundButton size="sm" disabled [attr.aria-label]="'progress.addWaist' | t">
+          <ng-icon name="lucidePlus" />
+        </button>
+      </tl-list-item>
+      <tl-list-item icon="lucideScale" [title]="'progress.weightTrend' | t" [subtitle]="'progress.weightHint' | t" />
+    </tl-list>
   `,
 })
-export class ProgressPage {}
+export class ProgressPage {
+  protected readonly i18n = inject(I18n);
+}

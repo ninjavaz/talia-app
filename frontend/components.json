@@ -1,5 +1,5 @@
 {
-  "componentsPath": "src/app/ui",
+  "componentsPath": "projects/ui/helm",
   "buildable": false,
   "generateAs": "entrypoint",
   "importAlias": "@ui",

@@ -1,85 +1,55 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideLogOut, lucideMonitor, lucideMoon, lucideSun } from '@ng-icons/lucide';
-import { HlmButtonImports } from '@ui/button';
-import { HlmCardImports } from '@ui/card';
-import { HlmToggleGroupImports } from '@ui/toggle-group';
+import { NgIcon } from '@ng-icons/core';
+import {
+  TlCard,
+  TlList,
+  TlListItem,
+  TlPageHeader,
+  TlSectionHeader,
+  TlSegmentOption,
+  TlSegmented,
+} from '@talia/ui';
 import { Auth } from '../../core/auth/auth';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
-import { Lang } from '../../core/i18n/translations';
-import { Theme, ThemeMode } from '../../core/theme/theme';
+import { Theme } from '../../core/theme/theme';
 
 @Component({
   selector: 'app-settings',
-  imports: [HlmButtonImports, HlmCardImports, HlmToggleGroupImports, NgIcon, TranslatePipe],
-  viewProviders: [provideIcons({ lucideSun, lucideMoon, lucideMonitor, lucideLogOut })],
+  imports: [NgIcon, TlCard, TlList, TlListItem, TlPageHeader, TlSectionHeader, TlSegmented, TranslatePipe],
   template: `
-    <h1 class="mb-4 text-2xl font-bold">{{ 'settings.title' | t }}</h1>
+    <tl-page-header [title]="'settings.title' | t" />
 
-    <div class="flex flex-col gap-4">
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'settings.appearance' | t }}</h2>
-        </div>
-        <div hlmCardContent>
-          <hlm-toggle-group
-            type="single"
-            variant="outline"
-            class="w-full"
-            [value]="theme.mode()"
-            (valueChange)="setTheme($event)"
-          >
-            <button hlmToggleGroupItem value="system" class="flex-1">
-              <ng-icon name="lucideMonitor" /> {{ 'settings.theme.system' | t }}
-            </button>
-            <button hlmToggleGroupItem value="light" class="flex-1">
-              <ng-icon name="lucideSun" /> {{ 'settings.theme.light' | t }}
-            </button>
-            <button hlmToggleGroupItem value="dark" class="flex-1">
-              <ng-icon name="lucideMoon" /> {{ 'settings.theme.dark' | t }}
-            </button>
-          </hlm-toggle-group>
-        </div>
-      </section>
+    <tl-section-header [title]="'settings.appearance' | t" />
+    <tl-card>
+      <tl-segmented [options]="themeOptions()" [value]="theme.mode()" (valueChange)="setTheme($event)" />
+    </tl-card>
 
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'settings.language' | t }}</h2>
-        </div>
-        <div hlmCardContent>
-          <hlm-toggle-group
-            type="single"
-            variant="outline"
-            class="w-full"
-            [value]="i18n.lang()"
-            (valueChange)="setLang($event)"
-          >
-            <button hlmToggleGroupItem value="pl" class="flex-1">Polski</button>
-            <button hlmToggleGroupItem value="en" class="flex-1">English</button>
-          </hlm-toggle-group>
-        </div>
-      </section>
+    <tl-section-header [title]="'settings.language' | t" />
+    <tl-card>
+      <tl-segmented [options]="langOptions" [value]="i18n.lang()" (valueChange)="setLang($event)" />
+    </tl-card>
 
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'settings.goals' | t }}</h2>
-          <p hlmCardDescription>{{ 'settings.goalsSoon' | t }}</p>
-        </div>
-      </section>
+    <tl-section-header [title]="'settings.goals' | t" />
+    <tl-list>
+      <button tlListItem disabled icon="lucideGoal" [title]="'settings.goals' | t" [subtitle]="'common.soon' | t">
+        <ng-icon tlListTrailing name="lucideChevronRight" class="text-muted-foreground text-xl" />
+      </button>
+      <button tlListItem disabled icon="lucideListChecks" [title]="'settings.habits' | t" [subtitle]="'common.soon' | t">
+        <ng-icon tlListTrailing name="lucideChevronRight" class="text-muted-foreground text-xl" />
+      </button>
+    </tl-list>
 
-      <section hlmCard>
-        <div hlmCardHeader>
-          <h2 hlmCardTitle>{{ 'settings.account' | t }}</h2>
-          <p hlmCardDescription>{{ 'settings.loggedAs' | t: { user: auth.user() ?? '' } }}</p>
-        </div>
-        <div hlmCardContent>
-          <button hlmBtn variant="outline" class="w-full" (click)="logout()">
-            <ng-icon name="lucideLogOut" /> {{ 'settings.logout' | t }}
-          </button>
-        </div>
-      </section>
-    </div>
+    <tl-section-header [title]="'settings.account' | t" />
+    <tl-list>
+      <button
+        tlListItem
+        icon="lucideLogOut"
+        [title]="'settings.logout' | t"
+        [subtitle]="'settings.loggedAs' | t: { user: auth.user() ?? '' }"
+        (click)="logout()"
+      ></button>
+    </tl-list>
   `,
 })
 export class SettingsPage {
@@ -88,16 +58,29 @@ export class SettingsPage {
   protected readonly auth = inject(Auth);
   private readonly router = inject(Router);
 
-  protected setTheme(value: unknown): void {
-    // single toggle group emits undefined when the active item is clicked again - keep the current one
+  protected readonly themeOptions = computed<TlSegmentOption[]>(() => {
+    this.i18n.lang();
+    return [
+      { value: 'system', label: this.i18n.t('settings.theme.system') },
+      { value: 'light', label: this.i18n.t('settings.theme.light') },
+      { value: 'dark', label: this.i18n.t('settings.theme.dark') },
+    ];
+  });
+
+  protected readonly langOptions: TlSegmentOption[] = [
+    { value: 'pl', label: 'Polski' },
+    { value: 'en', label: 'English' },
+  ];
+
+  protected setTheme(value: string | undefined): void {
     if (value === 'system' || value === 'light' || value === 'dark') {
-      this.theme.setMode(value as ThemeMode);
+      this.theme.setMode(value);
     }
   }
 
-  protected setLang(value: unknown): void {
+  protected setLang(value: string | undefined): void {
     if (value === 'pl' || value === 'en') {
-      this.i18n.setLang(value as Lang);
+      this.i18n.setLang(value);
     }
   }
 
