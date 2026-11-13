@@ -5,17 +5,29 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Body part 1 is the built-in waist (see IntegrationTest). */
 class CheckinIntegrationTest extends IntegrationTest {
 
     private ResultActions checkin(String json) throws Exception {
         return mvc.perform(put("/api/checkins").with(asUser()).contentType(MediaType.APPLICATION_JSON).content(json));
+    }
+
+    private void addPart(String name) throws Exception {
+        mvc.perform(post("/api/body-parts").with(asUser()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"" + name + "\"}"))
+                .andExpect(status().isCreated());
     }
 
     private int count(String table) {
@@ -29,12 +41,17 @@ class CheckinIntegrationTest extends IntegrationTest {
 
     @Test
     void savesAllValuesOfAWeek() throws Exception {
+        addPart("Biceps");
         checkin("""
-                {"date": "2026-11-15", "waistCm": 78.5, "weightKg": 64.2, "avgDailySteps": 8100}
+                {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 78.5}, {"partId": 2, "valueCm": 28}],
+                 "weightKg": 64.2, "avgDailySteps": 8100}
                 """)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.weekStart").value("2026-11-09"))
-                .andExpect(jsonPath("$.waistCm").value(78.5))
+                .andExpect(jsonPath("$.measurements.length()").value(2))
+                .andExpect(jsonPath("$.measurements[0].partId").value(1))
+                .andExpect(jsonPath("$.measurements[0].valueCm").value(78.5))
+                .andExpect(jsonPath("$.measurements[1].valueCm").value(28.0))
                 .andExpect(jsonPath("$.weightKg").value(64.2))
                 .andExpect(jsonPath("$.avgDailySteps").value(8100));
 
@@ -43,77 +60,78 @@ class CheckinIntegrationTest extends IntegrationTest {
 
     @Test
     void secondCheckinInTheSameWeekReplacesTheFirst() throws Exception {
+        addPart("Udo");
         checkin("""
-                {"date": "2026-11-14", "waistCm": 79, "weightKg": 64.6, "avgDailySteps": 7000}
+                {"date": "2026-11-14", "measurements": [{"partId": 1, "valueCm": 79}, {"partId": 2, "valueCm": 55}],
+                 "weightKg": 64.6, "avgDailySteps": 7000}
                 """).andExpect(status().isOk());
         checkin("""
-                {"date": "2026-11-15", "waistCm": 78.5, "weightKg": 64.2, "avgDailySteps": 8100}
-                """).andExpect(status().isOk());
-
-        assertThat(count("waist_entry")).isEqualTo(1);
-        assertThat(count("weight_entry")).isEqualTo(1);
-        assertThat(count("weekly_steps")).isEqualTo(1);
-        assertThat(jdbc.sql("SELECT avg_daily_steps FROM weekly_steps").query(Integer.class).single()).isEqualTo(8100);
-    }
-
-    @Test
-    void missingValuesLeaveThatMetricUntouched() throws Exception {
-        checkin("""
-                {"date": "2026-11-15", "waistCm": 78.5, "weightKg": 64.2}
-                """).andExpect(status().isOk());
-        checkin("""
-                {"date": "2026-11-15", "avgDailySteps": 9000}
+                {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 78.5}], "weightKg": 64.2}
                 """)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waistCm").value(78.5))
-                .andExpect(jsonPath("$.avgDailySteps").value(9000));
+                .andExpect(jsonPath("$.measurements.length()").value(1))
+                .andExpect(jsonPath("$.avgDailySteps").doesNotExist());
+
+        assertThat(count("body_measurement")).isEqualTo(1);
+        assertThat(count("weight_entry")).isEqualTo(1);
+        assertThat(count("weekly_steps")).isZero();
     }
 
     @Test
-    void rejectsEmptyFutureAndOutOfRangeCheckins() throws Exception {
+    void rejectsEmptyFutureOutOfRangeAndUnknownParts() throws Exception {
+        checkin("{\"date\": \"2026-11-15\"}").andExpect(status().isBadRequest());
         checkin("""
-                {"date": "2026-11-15"}
+                {"date": "2026-11-16", "measurements": [{"partId": 1, "valueCm": 78}]}
                 """).andExpect(status().isBadRequest());
         checkin("""
-                {"date": "2026-11-16", "waistCm": 78}
+                {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 2}]}
                 """).andExpect(status().isBadRequest());
         checkin("""
-                {"date": "2026-11-15", "waistCm": 5}
+                {"date": "2026-11-15", "measurements": [{"partId": 99, "valueCm": 30}]}
                 """).andExpect(status().isBadRequest());
-        assertThat(count("waist_entry")).isZero();
+        checkin("""
+                {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 78}, {"partId": 1, "valueCm": 79}]}
+                """).andExpect(status().isBadRequest());
+        assertThat(count("body_measurement")).isZero();
     }
 
     @Test
-    void progressShowsDeltasSinceStartAndHistory() throws Exception {
+    void progressShowsDeltasPerBodyPartAndHistory() throws Exception {
+        addPart("Biceps");
         checkin("""
-                {"date": "2026-11-01", "waistCm": 80.0, "weightKg": 65.0, "avgDailySteps": 6000}
+                {"date": "2026-11-01", "measurements": [{"partId": 1, "valueCm": 80.0}, {"partId": 2, "valueCm": 29}],
+                 "weightKg": 65.0, "avgDailySteps": 6000}
                 """).andExpect(status().isOk());
         checkin("""
-                {"date": "2026-11-15", "waistCm": 78.5, "weightKg": 64.0, "avgDailySteps": 8100}
+                {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 78.5}, {"partId": 2, "valueCm": 28.5}],
+                 "weightKg": 64.0, "avgDailySteps": 8100}
                 """).andExpect(status().isOk());
 
         mvc.perform(get("/api/progress").with(asUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.waist.latest").value(78.5))
-                .andExpect(jsonPath("$.waist.first").value(80.0))
                 .andExpect(jsonPath("$.waist.delta").value(-1.5))
                 .andExpect(jsonPath("$.weight.delta").value(-1.0))
-                .andExpect(jsonPath("$.waistPoints.length()").value(2))
+                .andExpect(jsonPath("$.bodyParts.length()").value(2))
+                .andExpect(jsonPath("$.bodyParts[0].code").value("WAIST"))
+                .andExpect(jsonPath("$.bodyParts[1].name").value("Biceps"))
+                .andExpect(jsonPath("$.bodyParts[1].metric.delta").value(-0.5))
+                .andExpect(jsonPath("$.bodyParts[1].points.length()").value(2))
                 .andExpect(jsonPath("$.avgDailyStepsThisWeek").value(8100))
-                .andExpect(jsonPath("$.dailyStepsGoal").value(8000))
                 .andExpect(jsonPath("$.checkinDoneThisWeek").value(true))
                 .andExpect(jsonPath("$.checkinDue").value(false));
 
         mvc.perform(get("/api/checkins").with(asUser()))
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].weekStart").value("2026-11-09"))
-                .andExpect(jsonPath("$[1].weekStart").value("2026-10-26"));
+                .andExpect(jsonPath("$[1].weekStart").value("2026-10-26"))
+                .andExpect(jsonPath("$[1].measurements[1].valueCm").value(29.0));
     }
 
     @Test
     void checkinIsDueOnSundayWhenNotDoneThisWeek() throws Exception {
         checkin("""
-                {"date": "2026-11-08", "waistCm": 79}
+                {"date": "2026-11-08", "measurements": [{"partId": 1, "valueCm": 79}]}
                 """).andExpect(status().isOk());
 
         mvc.perform(get("/api/progress").with(asUser()))
@@ -127,30 +145,53 @@ class CheckinIntegrationTest extends IntegrationTest {
         mvc.perform(get("/api/progress").with(asUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.waist").doesNotExist())
+                .andExpect(jsonPath("$.bodyParts[0].points.length()").value(0))
                 .andExpect(jsonPath("$.checkinDue").value(true));
     }
 
     @Test
     void deletingAWeekKeepsSyncedWeight() throws Exception {
         checkin("""
-                {"date": "2026-11-15", "waistCm": 78.5, "weightKg": 64.2, "avgDailySteps": 8100}
+                {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 78.5}], "weightKg": 64.2,
+                 "avgDailySteps": 8100}
                 """).andExpect(status().isOk());
         jdbc.sql("INSERT INTO weight_entry (measured_at, value_kg, source) VALUES ('2026-11-12 07:10', 64.4, 'HEALTH')")
                 .update();
 
         mvc.perform(delete("/api/checkins/2026-11-11").with(asUser())).andExpect(status().isNoContent());
 
-        assertThat(count("waist_entry")).isZero();
+        assertThat(count("body_measurement")).isZero();
         assertThat(count("weekly_steps")).isZero();
         assertThat(jdbc.sql("SELECT source FROM weight_entry").query(String.class).list()).containsExactly("HEALTH");
     }
 
     @Test
+    void bodyPartsCanBeAddedRenamedAndHiddenButWaistStays() throws Exception {
+        addPart("Biceps");
+        mvc.perform(put("/api/body-parts/2").with(asUser()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Biceps prawy\"}"))
+                .andExpect(jsonPath("$.name").value("Biceps prawy"));
+        checkin("""
+                {"date": "2026-11-15", "measurements": [{"partId": 2, "valueCm": 28}]}
+                """).andExpect(status().isOk());
+
+        mvc.perform(delete("/api/body-parts/1").with(asUser())).andExpect(status().isBadRequest());
+        mvc.perform(delete("/api/body-parts/2").with(asUser())).andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/body-parts").with(asUser()))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].code").value("WAIST"));
+        // the hidden part's history is kept in the database but not shown
+        assertThat(count("body_measurement")).isEqualTo(1);
+        mvc.perform(get("/api/checkins").with(asUser())).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void movingAverageUsesTheLastSevenDays() {
-        var points = java.util.List.of(
-                new CheckinDtos.Point(java.time.LocalDate.parse("2026-11-01"), new java.math.BigDecimal("65")),
-                new CheckinDtos.Point(java.time.LocalDate.parse("2026-11-03"), new java.math.BigDecimal("64")),
-                new CheckinDtos.Point(java.time.LocalDate.parse("2026-11-10"), new java.math.BigDecimal("63")));
+        var points = List.of(
+                new CheckinDtos.Point(LocalDate.parse("2026-11-01"), new BigDecimal("65")),
+                new CheckinDtos.Point(LocalDate.parse("2026-11-03"), new BigDecimal("64")),
+                new CheckinDtos.Point(LocalDate.parse("2026-11-10"), new BigDecimal("63")));
         var trend = CheckinService.movingAverage(points, 7);
         assertThat(trend.get(1).value()).isEqualByComparingTo("64.5");
         assertThat(trend.get(2).value()).isEqualByComparingTo("63");

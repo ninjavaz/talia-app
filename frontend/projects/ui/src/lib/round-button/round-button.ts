@@ -1,7 +1,7 @@
 import { Directive, input } from '@angular/core';
 
 const BASE =
-  'inline-flex shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:pointer-events-none disabled:opacity-40';
+  'inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full transition duration-200 hover:scale-110 active:scale-95 disabled:pointer-events-none disabled:opacity-40';
 
 const VARIANTS = {
   chip: 'bg-chip text-chip-foreground',

@@ -3,8 +3,11 @@ package app.talia.measurement;
 import app.talia.activity.StepsQueries;
 import app.talia.common.BadRequestException;
 import app.talia.common.Weeks;
+import app.talia.measurement.BodyPartService.BodyPart;
+import app.talia.measurement.CheckinDtos.BodyPartProgress;
 import app.talia.measurement.CheckinDtos.CheckinRequest;
 import app.talia.measurement.CheckinDtos.Metric;
+import app.talia.measurement.CheckinDtos.PartValue;
 import app.talia.measurement.CheckinDtos.Point;
 import app.talia.measurement.CheckinDtos.ProgressView;
 import app.talia.measurement.CheckinDtos.WeekEntry;
@@ -20,11 +23,15 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
- * Weekly check-in (waist, weight, average daily steps) and the progress overview.
- * There is at most one manual check-in per week: saving again within the same week replaces it.
+ * Weekly check-in (body measurements, weight, average daily steps) and the progress overview.
+ * There is one manual check-in per week; saving again replaces it.
  */
 @Service
 class CheckinService {
@@ -36,12 +43,15 @@ class CheckinService {
     private final Clock clock;
     private final StepsQueries steps;
     private final SettingsRepository settings;
+    private final BodyPartService bodyParts;
 
-    CheckinService(JdbcClient jdbc, Clock clock, StepsQueries steps, SettingsRepository settings) {
+    CheckinService(JdbcClient jdbc, Clock clock, StepsQueries steps, SettingsRepository settings,
+                   BodyPartService bodyParts) {
         this.jdbc = jdbc;
         this.clock = clock;
         this.steps = steps;
         this.settings = settings;
+        this.bodyParts = bodyParts;
     }
 
     @Transactional
@@ -50,25 +60,21 @@ class CheckinService {
         if (date.isAfter(LocalDate.now(clock))) {
             throw new BadRequestException("Date is in the future");
         }
-        LocalDate start = Weeks.start(date);
-        LocalDate end = start.plusDays(6);
-
-        if (request.waistCm() != null) {
-            jdbc.sql("DELETE FROM waist_entry WHERE measured_on BETWEEN :start AND :end AND measured_on <> :date")
-                    .param("start", start).param("end", end).param("date", date).update();
-            jdbc.sql("""
-                            INSERT INTO waist_entry (measured_on, value_cm) VALUES (:date, :value)
-                            ON CONFLICT (measured_on) DO UPDATE SET value_cm = EXCLUDED.value_cm
-                            """)
-                    .param("date", date).param("value", request.waistCm()).update();
+        var seen = new HashSet<Long>();
+        for (PartValue m : request.measurements()) {
+            if (!seen.add(m.partId()) || !bodyParts.isActive(m.partId())) {
+                throw new BadRequestException("Unknown or duplicate body part " + m.partId());
+            }
         }
 
+        LocalDate start = Weeks.start(date);
+        deleteManualData(start);
+
+        for (PartValue m : request.measurements()) {
+            jdbc.sql("INSERT INTO body_measurement (body_part_id, measured_on, value_cm) VALUES (:part, :date, :value)")
+                    .param("part", m.partId()).param("date", date).param("value", m.valueCm()).update();
+        }
         if (request.weightKg() != null) {
-            jdbc.sql("""
-                            DELETE FROM weight_entry
-                            WHERE source = 'MANUAL' AND measured_at >= :start AND measured_at < :next
-                            """)
-                    .param("start", start.atStartOfDay()).param("next", end.plusDays(1).atStartOfDay()).update();
             jdbc.sql("""
                             INSERT INTO weight_entry (measured_at, value_kg, source) VALUES (:ts, :value, 'MANUAL')
                             ON CONFLICT (measured_at) DO UPDATE
@@ -76,13 +82,8 @@ class CheckinService {
                             """)
                     .param("ts", date.atTime(MANUAL_WEIGHT_TIME)).param("value", request.weightKg()).update();
         }
-
         if (request.avgDailySteps() != null) {
-            jdbc.sql("""
-                            INSERT INTO weekly_steps (week_start, avg_daily_steps) VALUES (:start, :steps)
-                            ON CONFLICT (week_start) DO UPDATE
-                               SET avg_daily_steps = EXCLUDED.avg_daily_steps, updated_at = now()
-                            """)
+            jdbc.sql("INSERT INTO weekly_steps (week_start, avg_daily_steps) VALUES (:start, :steps)")
                     .param("start", start).param("steps", request.avgDailySteps()).update();
         }
 
@@ -92,12 +93,19 @@ class CheckinService {
                 .orElseThrow();
     }
 
-    /** Removes the manual check-in of a week (synced Health data stays). */
+    /** Removes the manual check-in of a week (synced Health data and hidden body parts stay). */
     @Transactional
     void deleteWeek(LocalDate anyDay) {
-        LocalDate start = Weeks.start(anyDay);
+        deleteManualData(Weeks.start(anyDay));
+    }
+
+    private void deleteManualData(LocalDate start) {
         LocalDate end = start.plusDays(6);
-        jdbc.sql("DELETE FROM waist_entry WHERE measured_on BETWEEN :start AND :end")
+        jdbc.sql("""
+                        DELETE FROM body_measurement
+                        WHERE measured_on BETWEEN :start AND :end
+                          AND body_part_id IN (SELECT id FROM body_part WHERE active)
+                        """)
                 .param("start", start).param("end", end).update();
         jdbc.sql("DELETE FROM weight_entry WHERE source = 'MANUAL' AND measured_at >= :start AND measured_at < :next")
                 .param("start", start.atStartOfDay()).param("next", end.plusDays(1).atStartOfDay()).update();
@@ -105,42 +113,76 @@ class CheckinService {
     }
 
     List<WeekEntry> history(int limit) {
-        return jdbc.sql("""
+        record WeekRow(LocalDate weekStart, BigDecimal weightKg, Integer steps) {
+        }
+        List<WeekRow> weeks = jdbc.sql("""
                         WITH weeks AS (
-                            SELECT date_trunc('week', measured_on)::date AS wk FROM waist_entry
+                            SELECT date_trunc('week', m.measured_on)::date AS wk
+                            FROM body_measurement m JOIN body_part p ON p.id = m.body_part_id AND p.active
                             UNION SELECT date_trunc('week', measured_at)::date FROM weight_entry
                             UNION SELECT week_start FROM weekly_steps
-                        ), waist AS (
-                            SELECT DISTINCT ON (date_trunc('week', measured_on))
-                                   date_trunc('week', measured_on)::date AS wk, value_cm
-                            FROM waist_entry ORDER BY date_trunc('week', measured_on), measured_on DESC
                         ), weight AS (
                             SELECT date_trunc('week', measured_at)::date AS wk, round(avg(value_kg), 1) AS value_kg
                             FROM weight_entry GROUP BY 1
                         )
-                        SELECT w.wk, waist.value_cm, weight.value_kg, s.avg_daily_steps
+                        SELECT w.wk, weight.value_kg, s.avg_daily_steps
                         FROM weeks w
-                        LEFT JOIN waist ON waist.wk = w.wk
                         LEFT JOIN weight ON weight.wk = w.wk
                         LEFT JOIN weekly_steps s ON s.week_start = w.wk
                         ORDER BY w.wk DESC
                         LIMIT :limit
                         """)
                 .param("limit", limit)
-                .query((rs, n) -> new WeekEntry(
-                        rs.getObject(1, LocalDate.class),
-                        rs.getBigDecimal(2),
-                        rs.getBigDecimal(3),
-                        (Integer) rs.getObject(4)))
+                .query((rs, n) -> new WeekRow(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2),
+                        (Integer) rs.getObject(3)))
                 .list();
+        if (weeks.isEmpty()) {
+            return List.of();
+        }
+
+        // latest value per (week, part), active parts only, in the parts' display order
+        Map<LocalDate, List<PartValue>> perWeek = new LinkedHashMap<>();
+        jdbc.sql("""
+                        SELECT DISTINCT ON (date_trunc('week', m.measured_on), m.body_part_id)
+                               date_trunc('week', m.measured_on)::date, m.body_part_id, m.value_cm, p.sort_order
+                        FROM body_measurement m JOIN body_part p ON p.id = m.body_part_id AND p.active
+                        WHERE m.measured_on >= :from
+                        ORDER BY date_trunc('week', m.measured_on), m.body_part_id, m.measured_on DESC
+                        """)
+                .param("from", weeks.getLast().weekStart())
+                .query((rs, n) -> new Object[]{rs.getObject(1, LocalDate.class), rs.getLong(2), rs.getBigDecimal(3),
+                        rs.getInt(4)})
+                .list().stream()
+                .sorted((a, b) -> Integer.compare((int) a[3], (int) b[3]))
+                .forEach(r -> perWeek.computeIfAbsent((LocalDate) r[0], k -> new ArrayList<>())
+                        .add(new PartValue((Long) r[1], (BigDecimal) r[2])));
+
+        return weeks.stream()
+                .map(w -> new WeekEntry(w.weekStart(), perWeek.getOrDefault(w.weekStart(), List.of()),
+                        w.weightKg(), w.steps()))
+                .toList();
     }
 
     ProgressView progress() {
         LocalDate today = LocalDate.now(clock);
 
-        List<Point> waistPoints = jdbc.sql("SELECT measured_on, value_cm FROM waist_entry ORDER BY measured_on")
-                .query((rs, n) -> new Point(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2)))
-                .list();
+        List<BodyPartProgress> parts = new ArrayList<>();
+        for (BodyPart part : bodyParts.list()) {
+            List<Point> points = jdbc.sql("""
+                            SELECT measured_on, value_cm FROM body_measurement
+                            WHERE body_part_id = :part ORDER BY measured_on
+                            """)
+                    .param("part", part.id())
+                    .query((rs, n) -> new Point(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2)))
+                    .list();
+            parts.add(new BodyPartProgress(part.id(), part.name(), part.code(), metric(points, 1), points));
+        }
+        Metric waist = parts.stream()
+                .filter(p -> BodyPartService.WAIST.equals(p.code()))
+                .map(BodyPartProgress::metric)
+                .filter(Objects::nonNull)
+                .findFirst().orElse(null);
+
         List<Point> weightPoints = jdbc.sql("""
                         SELECT measured_at::date, round(avg(value_kg), 2)
                         FROM weight_entry GROUP BY 1 ORDER BY 1
@@ -149,17 +191,30 @@ class CheckinService {
                 .list();
         List<Point> weightTrend = movingAverage(weightPoints, 7);
 
-        LocalDate lastCheckin = waistPoints.isEmpty() ? null : waistPoints.getLast().date();
-        boolean doneThisWeek = lastCheckin != null && !lastCheckin.isBefore(Weeks.start(today));
+        LocalDate lastCheckin = jdbc.sql("""
+                        SELECT max(d) FROM (
+                            SELECT max(m.measured_on) AS d
+                            FROM body_measurement m JOIN body_part p ON p.id = m.body_part_id AND p.active
+                            UNION ALL SELECT max(measured_at)::date FROM weight_entry WHERE source = 'MANUAL'
+                            UNION ALL SELECT max(week_start) + 6 FROM weekly_steps
+                        ) t
+                        """)
+                .query(LocalDate.class).optional().orElse(null);
+        LocalDate weekStart = Weeks.start(today);
+        boolean doneThisWeek = lastCheckin != null && !lastCheckin.isBefore(weekStart);
         boolean due = !doneThisWeek
                 && (today.getDayOfWeek() == DayOfWeek.SUNDAY
                 || lastCheckin == null
                 || lastCheckin.isBefore(today.minusDays(7)));
+        // a steps-only check-in "ends" on Sunday; never report a date in the future
+        if (lastCheckin != null && lastCheckin.isAfter(today)) {
+            lastCheckin = today;
+        }
 
         return new ProgressView(
-                metric(waistPoints, 1),
+                waist,
                 metric(weightTrend, 1),
-                waistPoints,
+                parts,
                 weightPoints,
                 weightTrend,
                 steps.avgDailySteps(today).orElse(null),

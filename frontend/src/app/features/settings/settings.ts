@@ -15,11 +15,12 @@ import {
   TlSectionHeader,
   TlSegmentOption,
   TlSegmented,
+  TlToast,
 } from '@talia/ui';
-import { Api, Habit, Settings, safeValue } from '../../core/api';
+import { Api, BodyPart, Habit, Settings, safeValue } from '../../core/api';
 import { Auth } from '../../core/auth/auth';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
-import { Lang } from '../../core/i18n/translations';
+import { Lang, TranslationKey } from '../../core/i18n/translations';
 import { Theme } from '../../core/theme/theme';
 
 @Component({
@@ -88,6 +89,31 @@ import { Theme } from '../../core/theme/theme';
     </tl-list>
     <p class="text-muted-foreground mt-2 px-2 text-xs">{{ 'settings.habitsHint' | t }}</p>
 
+    <tl-section-header [title]="'settings.bodyParts' | t" />
+    <tl-list>
+      @for (b of bodyPartsData() ?? []; track b.id) {
+        <tl-list-item icon="lucideRuler" [title]="b.code === 'WAIST' ? ('progress.waist' | t) : b.name">
+          <span tlListTrailing class="flex gap-1">
+            @if (b.code !== 'WAIST') {
+              <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'settings.renameBodyPart' | t" (click)="renameBodyPart(b)">
+                <ng-icon name="lucidePencil" class="text-muted-foreground" />
+              </button>
+              <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'common.delete' | t" (click)="removeBodyPart(b)">
+                <ng-icon name="lucideTrash2" class="text-muted-foreground" />
+              </button>
+            }
+          </span>
+        </tl-list-item>
+      }
+      <form class="flex items-center gap-2 py-3" (ngSubmit)="addBodyPart()">
+        <input tlInput name="newBodyPart" maxlength="50" [placeholder]="'settings.newBodyPart' | t" [(ngModel)]="newBodyPart" />
+        <button tlRoundButton variant="solid" type="submit" [attr.aria-label]="'common.add' | t" [disabled]="!newBodyPart().trim()">
+          <ng-icon name="lucidePlus" />
+        </button>
+      </form>
+    </tl-list>
+    <p class="text-muted-foreground mt-2 px-2 text-xs">{{ 'settings.bodyPartsHint' | t }}</p>
+
     <tl-section-header [title]="'settings.appearance' | t" />
     <tl-card>
       <tl-segmented [options]="themeOptions()" [value]="theme.mode()" (valueChange)="setTheme($event)" />
@@ -121,6 +147,10 @@ export class SettingsPage {
   protected readonly habits = httpResource<Habit[]>(() => '/api/habits');
   protected readonly settingsData = safeValue(this.settings);
   protected readonly habitsData = safeValue(this.habits);
+  protected readonly bodyParts = httpResource<BodyPart[]>(() => '/api/body-parts');
+  protected readonly bodyPartsData = safeValue(this.bodyParts);
+  protected readonly newBodyPart = signal('');
+  private readonly toast = inject(TlToast);
 
   protected readonly workoutGoal = signal('');
   protected readonly stepsGoal = signal('');
@@ -170,26 +200,61 @@ export class SettingsPage {
 
   protected async addHabit(): Promise<void> {
     const name = this.newHabit.trim();
-    if (!name) {
-      return;
+    if (name && (await this.attempt(() => this.api.addHabit(name), 'common.added'))) {
+      this.newHabit = '';
+      this.habits.reload();
     }
-    await this.api.addHabit(name);
-    this.newHabit = '';
-    this.habits.reload();
   }
 
   protected async rename(habit: Habit): Promise<void> {
     const name = prompt(this.i18n.t('settings.renamePrompt'), habit.name)?.trim();
-    if (name && name !== habit.name) {
-      await this.api.renameHabit(habit.id, name);
+    if (name && name !== habit.name && (await this.attempt(() => this.api.renameHabit(habit.id, name), 'common.saved'))) {
       this.habits.reload();
     }
   }
 
   protected async removeHabit(habit: Habit): Promise<void> {
-    if (confirm(this.i18n.t('settings.deleteHabitConfirm', { name: habit.name }))) {
-      await this.api.deleteHabit(habit.id);
+    if (
+      confirm(this.i18n.t('settings.deleteHabitConfirm', { name: habit.name })) &&
+      (await this.attempt(() => this.api.deleteHabit(habit.id), 'common.deleted'))
+    ) {
       this.habits.reload();
+    }
+  }
+
+  protected async addBodyPart(): Promise<void> {
+    const name = this.newBodyPart().trim();
+    if (name && (await this.attempt(() => this.api.addBodyPart(name), 'common.added'))) {
+      this.newBodyPart.set('');
+      this.bodyParts.reload();
+    }
+  }
+
+  protected async renameBodyPart(part: BodyPart): Promise<void> {
+    const name = prompt(this.i18n.t('settings.renameBodyPart'), part.name)?.trim();
+    if (name && name !== part.name && (await this.attempt(() => this.api.renameBodyPart(part.id, name), 'common.saved'))) {
+      this.bodyParts.reload();
+    }
+  }
+
+  protected async removeBodyPart(part: BodyPart): Promise<void> {
+    if (
+      confirm(this.i18n.t('settings.deleteBodyPartConfirm', { name: part.name })) &&
+      (await this.attempt(() => this.api.deleteBodyPart(part.id), 'common.deleted'))
+    ) {
+      this.bodyParts.reload();
+    }
+  }
+
+  /** Runs a write, shows a green confirmation or a red error toast; true on success. */
+  private async attempt(action: () => Promise<unknown>, successKey: TranslationKey): Promise<boolean> {
+    try {
+      await action();
+      this.toast.success(this.i18n.t(successKey));
+      return true;
+    } catch {
+      this.toast.error(this.i18n.t('common.saveError'));
+      return false;
     }
   }
 
@@ -221,9 +286,11 @@ export class SettingsPage {
     try {
       this.settings.set(await this.api.saveSettings(body));
       this.goalsSaved.set(true);
+      this.toast.success(this.i18n.t('common.saved'));
       setTimeout(() => this.goalsSaved.set(false), 2000);
     } catch {
       this.goalsError.set(true);
+      this.toast.error(this.i18n.t('common.saveError'));
     } finally {
       this.busy.set(false);
     }

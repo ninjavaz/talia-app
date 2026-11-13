@@ -55,9 +55,12 @@ public abstract class IntegrationTest {
     void setUpMockMvcAndCleanData() {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         jdbc.sql("""
-                TRUNCATE daily_steps, weekly_steps, weight_entry, waist_entry, workout, sync_log, habit, habit_check
+                TRUNCATE daily_steps, weekly_steps, weight_entry, body_part, body_measurement, workout, sync_log,
+                         habit, habit_check
                 RESTART IDENTITY CASCADE
                 """).update();
+        // body part 1 = built-in waist
+        jdbc.sql("INSERT INTO body_part (name, code, sort_order) VALUES ('Talia', 'WAIST', 0)").update();
         jdbc.sql("""
                 INSERT INTO habit (name, sort_order) VALUES
                     ('Białko w posiłkach', 1), ('Warzywa do 2 posiłków', 2), ('Bez słodkich napojów', 3)

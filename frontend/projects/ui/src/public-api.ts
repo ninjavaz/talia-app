@@ -18,3 +18,5 @@ export * from './lib/button/button';
 export * from './lib/field/field';
 export * from './lib/sheet/sheet';
 export * from './lib/trend-chart/trend-chart';
+export * from './lib/celebrate/diamonds';
+export * from './lib/toast/toast';

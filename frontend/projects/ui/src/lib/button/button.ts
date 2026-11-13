@@ -1,7 +1,7 @@
 import { Directive, input } from '@angular/core';
 
 const BASE =
-  'inline-flex h-12 items-center justify-center gap-2 rounded-full px-5 text-base font-medium transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
+  'inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-full px-5 text-base font-medium transition duration-200 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50';
 
 const VARIANTS = {
   primary: 'bg-primary text-primary-foreground',

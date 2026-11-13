@@ -14,10 +14,31 @@ export interface Metric {
   delta: number;
 }
 
+export interface BodyPart {
+  id: number;
+  name: string;
+  /** 'WAIST' for the built-in waist, null for user-defined parts. */
+  code: string | null;
+  sortOrder: number;
+}
+
+export interface PartValue {
+  partId: number;
+  valueCm: number;
+}
+
+export interface BodyPartProgress {
+  id: number;
+  name: string;
+  code: string | null;
+  metric: Metric | null;
+  points: Point[];
+}
+
 export interface Progress {
   waist: Metric | null;
   weight: Metric | null;
-  waistPoints: Point[];
+  bodyParts: BodyPartProgress[];
   weightPoints: Point[];
   weightTrend: Point[];
   avgDailyStepsThisWeek: number | null;
@@ -30,14 +51,14 @@ export interface Progress {
 
 export interface WeekEntry {
   weekStart: string;
-  waistCm: number | null;
+  measurements: PartValue[];
   weightKg: number | null;
   avgDailySteps: number | null;
 }
 
 export interface CheckinRequest {
   date: string;
-  waistCm: number | null;
+  measurements: PartValue[];
   weightKg: number | null;
   avgDailySteps: number | null;
 }
@@ -127,6 +148,18 @@ export class Api {
 
   deleteHabit(id: number): Promise<unknown> {
     return firstValueFrom(this.http.delete(`/api/habits/${id}`));
+  }
+
+  addBodyPart(name: string): Promise<BodyPart> {
+    return firstValueFrom(this.http.post<BodyPart>('/api/body-parts', { name }));
+  }
+
+  renameBodyPart(id: number, name: string): Promise<BodyPart> {
+    return firstValueFrom(this.http.put<BodyPart>(`/api/body-parts/${id}`, { name }));
+  }
+
+  deleteBodyPart(id: number): Promise<unknown> {
+    return firstValueFrom(this.http.delete(`/api/body-parts/${id}`));
   }
 
   saveSettings(body: Settings): Promise<Settings> {

@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { TlToaster } from '@talia/ui';
 import { I18n } from './core/i18n/i18n';
 import { Theme } from './core/theme/theme';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  template: `<router-outlet />`,
+  imports: [RouterOutlet, TlToaster],
+  template: `<router-outlet /><tl-toaster />`,
 })
 export class App {
   constructor() {

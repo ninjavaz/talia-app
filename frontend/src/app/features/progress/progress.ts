@@ -17,11 +17,12 @@ import {
   TlStatTone,
   TlTrendChart,
 } from '@talia/ui';
-import { Metric, Progress, WeekEntry, WeekView, addDays, safeValue } from '../../core/api';
+import { BodyPartProgress, Metric, Progress, WeekEntry, WeekView, addDays, isoDate, safeValue } from '../../core/api';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
-import { CheckinSheet } from './checkin-sheet';
+import { CheckinPart, CheckinSheet } from './checkin-sheet';
 
-type ChartMetric = 'weight' | 'waist';
+/** 'weight' or 'part-<id>' */
+type ChartMetric = string;
 
 /** Waist + weight trend, this week at a glance, weekly check-in history and the Sunday reminder. */
 @Component({
@@ -46,7 +47,7 @@ type ChartMetric = 'weight' | 'waist';
   ],
   template: `
     <tl-page-header [title]="i18n.today()">
-      <button tlRoundButton [attr.aria-label]="'progress.addCheckin' | t" (click)="openCheckin(null)">
+      <button tlRoundButton [attr.aria-label]="'progress.addCheckin' | t" (click)="openCurrentWeek()">
         <ng-icon name="lucidePlus" />
       </button>
     </tl-page-header>
@@ -66,7 +67,7 @@ type ChartMetric = 'weight' | 'waist';
             <p class="text-muted-foreground mt-0.5 text-sm">{{ 'progress.reminderBody' | t }}</p>
           </div>
         </div>
-        <button tlButton class="mt-4 w-full" (click)="openCheckin(null)">{{ 'progress.reminderAction' | t }}</button>
+        <button tlButton class="mt-4 w-full" (click)="openCurrentWeek()">{{ 'progress.reminderAction' | t }}</button>
       </tl-card>
     }
 
@@ -107,7 +108,7 @@ type ChartMetric = 'weight' | 'waist';
     </tl-panel>
 
     <tl-section-header [title]="'progress.thisWeek' | t" link="/week" />
-    <a routerLink="/week" class="block">
+    <a routerLink="/week" class="block transition duration-200 hover:scale-[1.01]">
       <tl-card>
         @let w = weekData();
         <div class="flex justify-around">
@@ -152,7 +153,7 @@ type ChartMetric = 'weight' | 'waist';
       <tl-card><p class="text-muted-foreground text-sm">{{ 'progress.historyEmpty' | t }}</p></tl-card>
     }
 
-    <app-checkin-sheet [(open)]="sheetOpen" [entry]="editing()" (saved)="reload()" />
+    <app-checkin-sheet [(open)]="sheetOpen" [parts]="checkinParts()" [entry]="editing()" (saved)="reload()" />
   `,
 })
 export class ProgressPage {
@@ -170,23 +171,27 @@ export class ProgressPage {
   protected readonly editing = signal<WeekEntry | null>(null);
   protected readonly chartMetric = signal<ChartMetric>('weight');
 
-  protected readonly chartOptions = computed(() => {
-    this.i18n.lang();
-    return [
-      { value: 'weight', label: this.i18n.t('progress.weight') },
-      { value: 'waist', label: this.i18n.t('progress.waist') },
-    ];
-  });
+  /** Active body parts with display labels (the built-in waist is translated). */
+  protected readonly checkinParts = computed<CheckinPart[]>(() =>
+    (this.progressData()?.bodyParts ?? []).map((p) => ({ id: p.id, label: this.partLabel(p) })),
+  );
 
-  protected readonly chartPoints = computed(() => {
-    const p = this.progressData();
-    return (this.chartMetric() === 'weight' ? p?.weightPoints : p?.waistPoints) ?? [];
-  });
+  protected readonly chartOptions = computed(() => [
+    { value: 'weight', label: this.i18n.t('progress.weight') },
+    ...this.checkinParts().map((p) => ({ value: `part-${p.id}`, label: p.label })),
+  ]);
 
-  protected readonly chartTrend = computed(() => {
-    const p = this.progressData();
-    return this.chartMetric() === 'weight' ? (p?.weightTrend ?? []) : (p?.waistPoints ?? []);
-  });
+  private readonly chartPart = computed(() =>
+    this.progressData()?.bodyParts.find((p) => `part-${p.id}` === this.chartMetric()),
+  );
+
+  protected readonly chartPoints = computed(() =>
+    this.chartMetric() === 'weight' ? (this.progressData()?.weightPoints ?? []) : (this.chartPart()?.points ?? []),
+  );
+
+  protected readonly chartTrend = computed(() =>
+    this.chartMetric() === 'weight' ? (this.progressData()?.weightTrend ?? []) : (this.chartPart()?.points ?? []),
+  );
 
   protected readonly stepsThisWeek = computed(() => {
     const p = this.progressData();
@@ -195,6 +200,13 @@ export class ProgressPage {
 
   protected readonly formatAxis = (v: number) => this.i18n.num(v, 1);
   protected readonly formatDate = (iso: string) => this.i18n.date(iso, { day: 'numeric', month: 'numeric' });
+
+  /** "+" edits this week's check-in when there already is one, otherwise starts a new one. */
+  protected openCurrentWeek(): void {
+    const today = isoDate();
+    const current = this.historyData()?.find((e) => e.weekStart <= today && today <= addDays(e.weekStart, 6));
+    this.openCheckin(current ?? null);
+  }
 
   protected openCheckin(entry: WeekEntry | null): void {
     this.editing.set(entry);
@@ -224,9 +236,16 @@ export class ProgressPage {
 
   protected summary(e: WeekEntry): string {
     const parts: string[] = [];
-    if (e.waistCm != null) parts.push(`${this.i18n.num(e.waistCm, 1)} cm`);
+    const labels = new Map(this.checkinParts().map((p) => [p.id, p.label]));
+    for (const m of e.measurements) {
+      parts.push(`${labels.get(m.partId) ?? ''} ${this.i18n.num(m.valueCm, 1)}`.trim());
+    }
     if (e.weightKg != null) parts.push(`${this.i18n.num(e.weightKg, 1)} kg`);
     if (e.avgDailySteps != null) parts.push(`${this.i18n.num(e.avgDailySteps, 0)} ${this.i18n.t('progress.stepsUnit')}`);
     return parts.join(' · ');
+  }
+
+  private partLabel(p: BodyPartProgress): string {
+    return p.code === 'WAIST' ? this.i18n.t('progress.waist') : p.name;
   }
 }

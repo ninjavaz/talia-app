@@ -20,7 +20,7 @@ export interface TlSegmentOption<T extends string = string> {
         type="button"
         role="radio"
         [attr.aria-checked]="option.value === value()"
-        class="rounded-full px-3 py-2.5 text-sm font-medium transition"
+        class="cursor-pointer rounded-full px-3 py-2.5 text-sm font-medium transition hover:scale-[1.03]"
         [class]="
           option.value === value()
             ? 'bg-primary text-primary-foreground shadow-sm'

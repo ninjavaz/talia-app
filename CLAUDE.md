@@ -38,6 +38,10 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   (table `weekly_steps`, wins over synced daily steps). One check-in per week, saving again replaces it.
   In-app reminder card on Progress when due (Sunday, or >7 days since the last waist). Habits are a daily checklist on the
   Week screen, workouts are added manually there. Health sync stays as an optional automatic source.
+- **Custom body measurements** (V3): `body_part` (+ built-in `code='WAIST'`, not deletable) and `body_measurement`.
+  The check-in sends `measurements: [{partId, valueCm}]` and *replaces* the week's manual data. Waist stays the headline metric.
+- UX: every save shows a green `TlToast` (`<tl-toaster>` in the app root); checking a habit fires `diamondBurst()` 💎
+  (bigger when all habits are done); clickable things have `cursor: pointer` and a subtle hover scale.
 - Pages read `httpResource` data through `safeValue()` (resource.value() throws in error state).
   Form fields bound with ngModel are signals (zoneless: plain fields set asynchronously don't re-render).
 - Goals, thresholds and habits are **configurable in the UI** (`app_settings` single row + `habit` table).

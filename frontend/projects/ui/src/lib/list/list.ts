@@ -26,7 +26,7 @@ export class TlList {}
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'flex w-full items-center gap-3.5 py-3.5 text-left disabled:opacity-50 [a&]:active:opacity-70 [button&]:active:opacity-70',
+      'flex w-full items-center gap-3.5 py-3.5 text-left transition disabled:opacity-50 [a&]:cursor-pointer [button&]:cursor-pointer [a&]:hover:translate-x-1 [button&]:enabled:hover:translate-x-1 [a&]:active:opacity-70 [button&]:active:opacity-70',
   },
   template: `
     @if (icon(); as name) {

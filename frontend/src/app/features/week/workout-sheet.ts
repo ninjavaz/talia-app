@@ -1,6 +1,6 @@
 import { Component, effect, inject, model, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { TlButton, TlField, TlInput, TlSegmented, TlSheet } from '@talia/ui';
+import { TlButton, TlField, TlInput, TlSegmented, TlSheet, TlToast } from '@talia/ui';
 import { Api, WorkoutCategory, isoDate } from '../../core/api';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 
@@ -46,6 +46,7 @@ const QUICK_DURATIONS = [30, 45, 60, 90];
 export class WorkoutSheet {
   private readonly api = inject(Api);
   private readonly i18n = inject(I18n);
+  private readonly toast = inject(TlToast);
 
   readonly open = model(false);
   readonly saved = output<void>();
@@ -83,6 +84,7 @@ export class WorkoutSheet {
     try {
       await this.api.addWorkout({ date: this.date(), category: this.category(), durationMin });
       this.open.set(false);
+      this.toast.success(this.i18n.t('common.added'));
       this.saved.emit();
     } catch {
       this.error.set(true);

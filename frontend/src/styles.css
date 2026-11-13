@@ -108,6 +108,15 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Tailwind's preflight resets buttons to the default cursor; everything clickable gets the hand. */
+  button:not(:disabled),
+  [role='button'],
+  a[href],
+  summary,
+  select,
+  input[type='date'] {
+    cursor: pointer;
+  }
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;

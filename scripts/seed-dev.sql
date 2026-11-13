@@ -10,7 +10,12 @@ END $$;
 
 SELECT setseed(0.42);
 
-TRUNCATE weight_entry, waist_entry, daily_steps, workout, habit_check, sync_log;
+TRUNCATE weight_entry, body_measurement, weekly_steps, daily_steps, workout, habit_check, sync_log;
+
+-- Extra body parts for the demo (added once).
+INSERT INTO body_part (name, sort_order)
+SELECT v.name, v.ord FROM (VALUES ('Biceps', 1), ('Udo', 2)) AS v(name, ord)
+WHERE NOT EXISTS (SELECT 1 FROM body_part p WHERE p.name = v.name AND p.active);
 
 UPDATE app_settings SET start_date = current_date - 56;
 
@@ -22,11 +27,15 @@ SELECT (current_date - d) + time '06:45' + (random() * interval '50 minutes'),
 FROM generate_series(0, 56) AS d
 WHERE random() > 0.12;
 
--- Waist: once a week (Sundays), -0.4 cm/week.
-INSERT INTO waist_entry (measured_on, value_cm)
-SELECT current_date - w * 7,
-       round((78.0 + 0.4 * w + (random() - 0.5) * 0.4)::numeric, 1)
-FROM generate_series(0, 8) AS w;
+-- Body measurements: once a week (Sundays). Waist -0.4 cm/week, thigh -0.3, biceps almost flat.
+INSERT INTO body_measurement (body_part_id, measured_on, value_cm)
+SELECT p.id, current_date - w * 7,
+       round((CASE p.code WHEN 'WAIST' THEN 78.0 + 0.4 * w ELSE
+              CASE p.name WHEN 'Udo' THEN 56.0 + 0.3 * w ELSE 28.5 + 0.05 * w END END
+              + (random() - 0.5) * 0.4)::numeric, 1)
+FROM generate_series(0, 8) AS w
+CROSS JOIN body_part p
+WHERE p.active AND (p.code = 'WAIST' OR p.name IN ('Biceps', 'Udo'));
 
 -- Steps: every day, today is partial.
 INSERT INTO daily_steps (day, steps)
@@ -61,7 +70,7 @@ WHERE h.active AND random() < 0.75;
 INSERT INTO sync_log (received_at, inserted, updated) VALUES (now() - interval '2 hours', 3, 1);
 
 SELECT 'weight' AS what, count(*) FROM weight_entry
-UNION ALL SELECT 'waist', count(*) FROM waist_entry
+UNION ALL SELECT 'body measurements', count(*) FROM body_measurement
 UNION ALL SELECT 'steps', count(*) FROM daily_steps
 UNION ALL SELECT 'workouts', count(*) FROM workout
 UNION ALL SELECT 'habit checks', count(*) FROM habit_check;

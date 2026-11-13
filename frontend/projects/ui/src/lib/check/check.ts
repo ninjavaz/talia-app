@@ -13,7 +13,7 @@ import { lucideCheck } from '@ng-icons/lucide';
     role: 'checkbox',
     '[attr.aria-checked]': 'checked()',
     class:
-      'inline-flex size-9 shrink-0 items-center justify-center rounded-full border-2 text-lg transition active:scale-90',
+      'inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 text-lg transition duration-200 hover:scale-110 hover:border-progress active:scale-90',
     '[class.border-track]': '!checked()',
     '[class.bg-progress]': 'checked()',
     '[class.border-progress]': 'checked()',

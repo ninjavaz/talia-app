@@ -36,7 +36,7 @@ import { lucideX } from '@ng-icons/lucide';
           <h2 class="text-lg font-semibold">{{ title() }}</h2>
           <button
             type="button"
-            class="bg-chip text-chip-foreground inline-flex size-8 items-center justify-center rounded-full"
+            class="bg-chip text-chip-foreground inline-flex size-8 cursor-pointer items-center justify-center rounded-full transition hover:scale-110"
             [attr.aria-label]="closeLabel()"
             (click)="close()"
           >

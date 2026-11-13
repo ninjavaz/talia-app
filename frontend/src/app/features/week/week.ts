@@ -13,6 +13,8 @@ import {
   TlRoundButton,
   TlSectionHeader,
   TlStat,
+  TlToast,
+  diamondBurst,
 } from '@talia/ui';
 import { Api, HabitDay, WeekView, Workout, isoDate, safeValue } from '../../core/api';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
@@ -63,7 +65,7 @@ import { WorkoutSheet } from './workout-sheet';
       <tl-list>
         @for (h of habits(); track h.id) {
           <tl-list-item [title]="h.name">
-            <button tlListTrailing tlCheck [checked]="h.done" [attr.aria-label]="h.name" (click)="toggle(h)"></button>
+            <button tlListTrailing tlCheck [checked]="h.done" [attr.aria-label]="h.name" (click)="toggle(h, $event)"></button>
           </tl-list-item>
         }
       </tl-list>
@@ -110,6 +112,7 @@ import { WorkoutSheet } from './workout-sheet';
 export class WeekPage {
   protected readonly i18n = inject(I18n);
   private readonly api = inject(Api);
+  private readonly toast = inject(TlToast);
 
   protected readonly icons = WORKOUT_ICONS;
   protected readonly today = isoDate();
@@ -122,9 +125,13 @@ export class WeekPage {
   protected readonly habits = linkedSignal(() => this.habitDayData() ?? []);
   protected readonly workoutOpen = signal(false);
 
-  protected async toggle(habit: HabitDay): Promise<void> {
+  protected async toggle(habit: HabitDay, event: Event): Promise<void> {
     const done = !habit.done;
     this.habits.update((list) => list.map((h) => (h.id === habit.id ? { ...h, done } : h)));
+    if (done) {
+      const allDone = this.habits().every((h) => h.done);
+      diamondBurst(event.currentTarget as Element, allDone ? { count: 40, spread: 220, height: 280 } : {});
+    }
     try {
       await this.api.setHabitDone(habit.id, this.today, done);
     } catch {
@@ -135,7 +142,12 @@ export class WeekPage {
 
   protected async deleteWorkout(workout: Workout): Promise<void> {
     if (confirm(this.i18n.t('week.deleteWorkoutConfirm'))) {
-      await this.api.deleteWorkout(workout.id);
+      try {
+        await this.api.deleteWorkout(workout.id);
+        this.toast.success(this.i18n.t('common.deleted'));
+      } catch {
+        this.toast.error(this.i18n.t('common.saveError'));
+      }
       this.week.reload();
     }
   }

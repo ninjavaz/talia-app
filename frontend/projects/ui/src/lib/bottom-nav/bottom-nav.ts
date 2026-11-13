@@ -28,7 +28,7 @@ export interface TlNavItem {
           [routerLink]="item.path"
           routerLinkActive
           ariaCurrentWhenActive="page"
-          class="text-nav-foreground aria-[current=page]:text-nav-active flex flex-col items-center gap-1 rounded-2xl py-2 text-[11px] font-medium transition-colors aria-[current=page]:bg-white/8 aria-[current=page]:font-semibold"
+          class="text-nav-foreground hover:text-nav-active aria-[current=page]:text-nav-active flex flex-col items-center gap-1 rounded-2xl py-2 text-[11px] font-medium transition hover:scale-105 aria-[current=page]:bg-white/8 aria-[current=page]:font-semibold"
         >
           <ng-icon [name]="item.icon" class="text-[22px]" />
           {{ item.label }}
