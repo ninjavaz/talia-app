@@ -27,10 +27,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/week/week').then((m) => m.WeekPage),
       },
       {
-        path: 'summary',
-        loadComponent: () => import('./features/summary/summary').then((m) => m.SummaryPage),
-      },
-      {
         path: 'settings',
         loadComponent: () => import('./features/settings/settings').then((m) => m.SettingsPage),
       },

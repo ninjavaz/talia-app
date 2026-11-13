@@ -18,12 +18,12 @@ import { I18n } from '../core/i18n/i18n';
 export class Shell {
   private readonly i18n = inject(I18n);
 
+  // The AI summary tab is hidden until v2 (features/summary is kept for later).
   protected readonly nav = computed<TlNavItem[]>(() => {
     this.i18n.lang();
     return [
       { path: 'progress', label: this.i18n.t('nav.progress'), icon: 'lucideTrendingDown' },
       { path: 'week', label: this.i18n.t('nav.week'), icon: 'lucideCalendarCheck' },
-      { path: 'summary', label: this.i18n.t('nav.summary'), icon: 'lucideSparkles' },
       { path: 'settings', label: this.i18n.t('nav.settings'), icon: 'lucideSettings' },
     ];
   });

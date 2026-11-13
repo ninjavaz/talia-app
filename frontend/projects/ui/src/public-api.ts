@@ -14,3 +14,7 @@ export * from './lib/round-button/round-button';
 export * from './lib/section-header/section-header';
 export * from './lib/segmented/segmented';
 export * from './lib/stat/stat';
+export * from './lib/button/button';
+export * from './lib/field/field';
+export * from './lib/sheet/sheet';
+export * from './lib/trend-chart/trend-chart';

@@ -32,9 +32,16 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - **Spring Boot 4.1 + Java 25** (overrides "Boot 3 / Java 21" above). Maven wrapper in `backend/`.
 - Single user; credentials from env: `TALIA_USERNAME`, `TALIA_PASSWORD_HASH` (DelegatingPasswordEncoder, e.g. `{bcrypt}$2a$...`),
   `TALIA_SYNC_TOKEN_SHA256` (hex). No user/token tables. Session: spring-session-jdbc, 90 days, cookie SameSite=Strict (CSRF defense, CSRF tokens disabled).
-- Weekly workout goal = one number (walks don't count toward it); workouts get a category (GYM/PILATES/WALK/OTHER) derived from the Health type name (PL+EN keywords).
+- Weekly workout goal = one number; **all workouts of the week count** (also walks). Workouts get a category
+  (GYM/PILATES/WALK/OTHER) derived from the Health type name (PL+EN keywords) or chosen when added manually.
+- **Manual-first (2026-11-13)**: once a week (Sunday) a *check-in* with waist, weight and the week's **average daily steps**
+  (table `weekly_steps`, wins over synced daily steps). One check-in per week, saving again replaces it.
+  In-app reminder card on Progress when due (Sunday, or >7 days since the last waist). Habits are a daily checklist on the
+  Week screen, workouts are added manually there. Health sync stays as an optional automatic source.
+- Pages read `httpResource` data through `safeValue()` (resource.value() throws in error state).
+  Form fields bound with ngModel are signals (zoneless: plain fields set asynchronously don't re-render).
 - Goals, thresholds and habits are **configurable in the UI** (`app_settings` single row + `habit` table).
-- **AI summary postponed to v2** – UI shows a "coming soon" card. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
+- **AI summary postponed to v2** and hidden from the UI for now. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
 - Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
 - **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).
 - **Frontend**: Angular 22 (zoneless, standalone, signals), Tailwind 4 via postcss, **Spartan UI** like the cook-less project
