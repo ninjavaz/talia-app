@@ -1,13 +1,14 @@
 package app.talia.auth.service;
 
+import app.talia.auth.repository.AltchaUsedRepository;
 import app.talia.common.Hashes;
 import app.talia.config.TaliaProperties;
 import org.altcha.altcha.v2.Altcha;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -19,7 +20,7 @@ import java.time.Instant;
  * brute force, which takes a person a second once and a bot farm a lot of CPU for every account.
  * Each solved challenge is accepted once (tracked in {@code altcha_used}).
  */
-@Component
+@Service
 public class BotCheckService {
 
     private static final Logger log = LoggerFactory.getLogger(BotCheckService.class);
@@ -28,18 +29,18 @@ public class BotCheckService {
     private final TaliaProperties.Altcha config;
     private final String hmacSecret;
     private final String keySecret;
-    private final JdbcClient jdbc;
+    private final AltchaUsedRepository used;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
 
-    BotCheckService(TaliaProperties properties, JdbcClient jdbc, Clock clock) {
+    BotCheckService(TaliaProperties properties, AltchaUsedRepository used, Clock clock) {
         this.config = properties.security().altcha();
         String configured = config.hmacSecret();
         // both secrets derive from the configured one, or are random for this process
         String base = configured == null || configured.isBlank() ? Hashes.randomToken() : configured;
         this.hmacSecret = Hashes.sha256("challenge:" + base);
         this.keySecret = Hashes.sha256("key:" + base);
-        this.jdbc = jdbc;
+        this.used = used;
         this.clock = clock;
     }
 
@@ -61,6 +62,7 @@ public class BotCheckService {
     }
 
     /** True if the payload is a valid, unexpired solution that was not used before (and marks it as used). */
+    @Transactional
     public boolean verify(String base64Payload) {
         if (base64Payload == null || base64Payload.isBlank() || base64Payload.length() > 4000) {
             return false;
@@ -80,21 +82,13 @@ public class BotCheckService {
         Number expiresAt = payload.challenge().parameters().expiresAt();
         Instant expires = expiresAt == null ? clock.instant().plus(config.ttl())
                 : Instant.ofEpochSecond(expiresAt.longValue());
-        int inserted = jdbc.sql("""
-                        INSERT INTO altcha_used (signature, expires_at) VALUES (:signature, :expires)
-                        ON CONFLICT (signature) DO NOTHING
-                        """)
-                .param("signature", Hashes.sha256(payload.challenge().signature()))
-                .param("expires", java.sql.Timestamp.from(expires))
-                .update();
-        return inserted == 1;
+        return used.markUsed(Hashes.sha256(payload.challenge().signature()), expires) == 1;
     }
 
     /** Expired challenges can not be replayed anyway (the signature check rejects them). */
     @Scheduled(fixedDelayString = "PT1H", initialDelayString = "PT5M")
+    @Transactional
     public void removeExpired() {
-        jdbc.sql("DELETE FROM altcha_used WHERE expires_at < :now")
-                .param("now", java.sql.Timestamp.from(clock.instant().minus(config.ttl())))
-                .update();
+        used.deleteExpiredBefore(clock.instant().minus(config.ttl()));
     }
 }

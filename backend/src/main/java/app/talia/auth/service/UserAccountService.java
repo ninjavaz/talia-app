@@ -1,12 +1,14 @@
 package app.talia.auth.service;
 
+import app.talia.auth.entity.AppUserEntity;
 import app.talia.auth.model.Account;
 import app.talia.auth.model.EmailTakenException;
 import app.talia.auth.model.TaliaUser;
 import app.talia.auth.model.UsernameTakenException;
+import app.talia.auth.repository.AppUserRepository;
 import app.talia.common.BadRequestException;
-import org.springframework.dao.DuplicateKeyException;
-import org.springframework.jdbc.core.simple.JdbcClient;
+import app.talia.settings.service.SettingsService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Locale;
@@ -24,6 +25,7 @@ import java.util.regex.Pattern;
 
 /** Accounts: creation with the username, e-mail and password rules, lookup for login and the e-mail flows. */
 @Service
+@Transactional
 public class UserAccountService implements UserDetailsService {
 
     private static final Pattern USERNAME = Pattern.compile("[a-z0-9._-]{3,30}");
@@ -40,17 +42,15 @@ public class UserAccountService implements UserDetailsService {
             "1q2w3e4r5t", "1qaz2wsx3edc", "zaq12wsxcde", "qazwsxedcrfv", "haslo12345", "haslohaslo", "iloveyou12",
             "0987654321", "1111111111", "aaaaaaaaaa", "abcdefghij", "abc1234567", "qwerty12345");
 
-    private static final String ACCOUNT_SELECT = """
-            SELECT u.id, u.username, u.email, s.language, u.email_verified_at IS NOT NULL
-            FROM app_user u JOIN user_settings s ON s.user_id = u.id
-            """;
-
-    private final JdbcClient jdbc;
+    private final AppUserRepository users;
+    private final SettingsService settings;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
-    UserAccountService(JdbcClient jdbc, PasswordEncoder passwordEncoder, Clock clock) {
-        this.jdbc = jdbc;
+    UserAccountService(AppUserRepository users, SettingsService settings, PasswordEncoder passwordEncoder,
+                       Clock clock) {
+        this.users = users;
+        this.settings = settings;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -85,8 +85,7 @@ public class UserAccountService implements UserDetailsService {
     /** Creates an account with a verified e-mail (tests, local tools). */
     public TaliaUser create(String username, String password) {
         TaliaUser user = create(username, normalize(username) + "@example.com", password, "pl");
-        jdbc.sql("UPDATE app_user SET email_verified_at = :now WHERE id = :id")
-                .param("now", now()).param("id", user.id()).update();
+        users.findById(user.id()).orElseThrow().markEmailVerified(clock.instant());
         return user;
     }
 
@@ -94,7 +93,6 @@ public class UserAccountService implements UserDetailsService {
      * Creates the account with its default settings (no body parts: the user adds what they want to measure).
      * The e-mail is unverified: login is possible after clicking the link from the e-mail.
      */
-    @Transactional
     public TaliaUser create(String rawUsername, String rawEmail, String password, String language) {
         String username = normalize(rawUsername);
         String email = normalizeEmail(rawEmail);
@@ -107,68 +105,48 @@ public class UserAccountService implements UserDetailsService {
         validatePassword(username, password);
         // hashed before the checks below, so "address already used" takes as long as a real registration
         String hash = passwordEncoder.encode(password);
-        if (exists("username", username)) {
+        if (users.existsByUsername(username)) {
             throw new UsernameTakenException();
         }
-        if (exists("email", email)) {
+        if (users.existsByEmail(email)) {
             throw new EmailTakenException();
         }
-        long id;
+        AppUserEntity user;
         try {
-            id = jdbc.sql("""
-                            INSERT INTO app_user (username, email, password_hash, created_at)
-                            VALUES (:username, :email, :hash, :now) RETURNING id
-                            """)
-                    .param("username", username)
-                    .param("email", email)
-                    .param("hash", hash)
-                    .param("now", now())
-                    .query(Long.class)
-                    .single();
-        } catch (DuplicateKeyException e) {
+            user = users.saveAndFlush(new AppUserEntity(username, email, hash, clock.instant()));
+        } catch (DataIntegrityViolationException e) {
             // two registrations at the same moment
             throw new UsernameTakenException();
         }
-        jdbc.sql("INSERT INTO user_settings (user_id, language) VALUES (:id, :language)")
-                .param("id", id).param("language", "en".equals(language) ? "en" : "pl").update();
-        return new TaliaUser(id, username, null);
+        settings.createDefaults(user.getId(), "en".equals(language) ? "en" : "pl");
+        return new TaliaUser(user.getId(), username, null);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public TaliaUser loadUserByUsername(String username) {
-        return jdbc.sql("SELECT id, username, password_hash FROM app_user WHERE username = :username")
-                .param("username", normalize(username))
-                .query((rs, n) -> new TaliaUser(rs.getLong(1), rs.getString(2), rs.getString(3)))
-                .optional()
+        return users.findByUsername(normalize(username))
+                .map(u -> new TaliaUser(u.getId(), u.getUsername(), u.getPasswordHash()))
                 .orElseThrow(() -> new UsernameNotFoundException("Unknown user"));
     }
 
+    @Transactional(readOnly = true)
     public Account account(long userId) {
-        return jdbc.sql(ACCOUNT_SELECT + " WHERE u.id = :id").param("id", userId)
-                .query((rs, n) -> new Account(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
-                        rs.getBoolean(5)))
-                .single();
+        return toAccount(users.findById(userId).orElseThrow());
     }
 
+    @Transactional(readOnly = true)
     public Optional<Account> accountByEmail(String email) {
-        return jdbc.sql(ACCOUNT_SELECT + " WHERE u.email = :email").param("email", normalizeEmail(email))
-                .query((rs, n) -> new Account(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
-                        rs.getBoolean(5)))
-                .optional();
+        return users.findByEmail(normalizeEmail(email)).map(this::toAccount);
     }
 
     /** Deletes accounts whose e-mail was never confirmed (frees the username and address again). */
     public int deleteUnverifiedOlderThan(Duration age) {
-        return jdbc.sql("DELETE FROM app_user WHERE email_verified_at IS NULL AND created_at < :cutoff")
-                .param("cutoff", Timestamp.from(clock.instant().minus(age))).update();
+        return users.deleteUnverifiedCreatedBefore(clock.instant().minus(age));
     }
 
-    private boolean exists(String column, String value) {
-        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM app_user WHERE " + column + " = :value)")
-                .param("value", value).query(Boolean.class).single();
-    }
-
-    private Timestamp now() {
-        return Timestamp.from(clock.instant());
+    private Account toAccount(AppUserEntity u) {
+        return new Account(u.getId(), u.getUsername(), u.getEmail(), settings.get(u.getId()).language(),
+                u.isEmailVerified());
     }
 }

@@ -1,8 +1,11 @@
 package app.talia.measurement.service;
 
+import app.talia.activity.entity.WeeklyStepsEntity;
+import app.talia.activity.repository.WeeklyStepsRepository;
 import app.talia.activity.service.StepsService;
 import app.talia.common.BadRequestException;
 import app.talia.common.Weeks;
+import app.talia.measurement.entity.BodyMeasurementEntity;
 import app.talia.measurement.model.BodyPart;
 import app.talia.measurement.model.BodyPartProgress;
 import app.talia.measurement.model.CheckinRequest;
@@ -11,8 +14,9 @@ import app.talia.measurement.model.PartValue;
 import app.talia.measurement.model.Point;
 import app.talia.measurement.model.ProgressView;
 import app.talia.measurement.model.WeekEntry;
+import app.talia.measurement.repository.BodyMeasurementRepository;
+import app.talia.measurement.repository.WeightEntryRepository;
 import app.talia.settings.service.SettingsService;
-import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,43 +25,50 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Weekly check-in (body measurements, weight, average daily steps) and the progress overview of one user.
- * There is one manual check-in per week; saving again replaces it. Every query is scoped by user_id.
+ * There is one manual check-in per week; saving again replaces it. Every query is scoped by the user.
  */
 @Service
+@Transactional
 public class CheckinService {
 
     /** Manual weight entries are stored at this time of day (synced ones keep their real timestamp). */
     private static final LocalTime MANUAL_WEIGHT_TIME = LocalTime.of(8, 0);
 
-    /** Body measurements of the user's active parts. */
-    private static final String ACTIVE_MEASUREMENTS =
-            "body_measurement m JOIN body_part p ON p.id = m.body_part_id AND p.active AND p.user_id = :user";
-
-    private final JdbcClient jdbc;
-    private final Clock clock;
+    private final BodyMeasurementRepository measurements;
+    private final WeightEntryRepository weights;
+    private final WeeklyStepsRepository weeklySteps;
+    private final BodyPartService bodyParts;
     private final StepsService steps;
     private final SettingsService settings;
-    private final BodyPartService bodyParts;
+    private final Clock clock;
 
-    CheckinService(JdbcClient jdbc, Clock clock, StepsService steps, SettingsService settings,
-                   BodyPartService bodyParts) {
-        this.jdbc = jdbc;
-        this.clock = clock;
+    CheckinService(BodyMeasurementRepository measurements, WeightEntryRepository weights,
+                   WeeklyStepsRepository weeklySteps, BodyPartService bodyParts, StepsService steps,
+                   SettingsService settings, Clock clock) {
+        this.measurements = measurements;
+        this.weights = weights;
+        this.weeklySteps = weeklySteps;
+        this.bodyParts = bodyParts;
         this.steps = steps;
         this.settings = settings;
-        this.bodyParts = bodyParts;
+        this.clock = clock;
     }
 
-    @Transactional
     public WeekEntry save(long userId, CheckinRequest request) {
         LocalDate date = request.date();
         if (date.isAfter(LocalDate.now(clock))) {
@@ -74,23 +85,14 @@ public class CheckinService {
         LocalDate start = Weeks.start(date);
         deleteManualData(userId, start);
 
-        for (PartValue m : request.measurements()) {
-            jdbc.sql("INSERT INTO body_measurement (body_part_id, measured_on, value_cm) VALUES (:part, :date, :value)")
-                    .param("part", m.partId()).param("date", date).param("value", m.valueCm()).update();
-        }
+        measurements.saveAll(request.measurements().stream()
+                .map(m -> new BodyMeasurementEntity(m.partId(), date, m.valueCm()))
+                .toList());
         if (request.weightKg() != null) {
-            jdbc.sql("""
-                            INSERT INTO weight_entry (user_id, measured_at, value_kg, source)
-                            VALUES (:user, :ts, :value, 'MANUAL')
-                            ON CONFLICT (user_id, measured_at) DO UPDATE
-                               SET value_kg = EXCLUDED.value_kg, source = 'MANUAL', updated_at = now()
-                            """)
-                    .param("user", userId).param("ts", date.atTime(MANUAL_WEIGHT_TIME))
-                    .param("value", request.weightKg()).update();
+            weights.upsertManual(userId, date.atTime(MANUAL_WEIGHT_TIME), request.weightKg());
         }
         if (request.avgDailySteps() != null) {
-            jdbc.sql("INSERT INTO weekly_steps (user_id, week_start, avg_daily_steps) VALUES (:user, :start, :steps)")
-                    .param("user", userId).param("start", start).param("steps", request.avgDailySteps()).update();
+            weeklySteps.save(new WeeklyStepsEntity(userId, start, request.avgDailySteps()));
         }
 
         return history(userId, Integer.MAX_VALUE).stream()
@@ -100,122 +102,76 @@ public class CheckinService {
     }
 
     /** Removes the manual check-in of a week (synced Health data and hidden body parts stay). */
-    @Transactional
     public void deleteWeek(long userId, LocalDate anyDay) {
         deleteManualData(userId, Weeks.start(anyDay));
     }
 
     private void deleteManualData(long userId, LocalDate start) {
         LocalDate end = start.plusDays(6);
-        jdbc.sql("""
-                        DELETE FROM body_measurement
-                        WHERE measured_on BETWEEN :start AND :end
-                          AND body_part_id IN (SELECT id FROM body_part WHERE user_id = :user AND active)
-                        """)
-                .param("user", userId).param("start", start).param("end", end).update();
-        jdbc.sql("""
-                        DELETE FROM weight_entry
-                        WHERE user_id = :user AND source = 'MANUAL' AND measured_at >= :start AND measured_at < :next
-                        """)
-                .param("user", userId).param("start", start.atStartOfDay())
-                .param("next", end.plusDays(1).atStartOfDay()).update();
-        jdbc.sql("DELETE FROM weekly_steps WHERE user_id = :user AND week_start = :start")
-                .param("user", userId).param("start", start).update();
+        measurements.deleteBetween(userId, start, end);
+        weights.deleteManualBetween(userId, start.atStartOfDay(), end.plusDays(1).atStartOfDay());
+        weeklySteps.deleteWeek(userId, start);
     }
 
+    /** Newest week first: every week with a measurement, a weight or a steps value. */
+    @Transactional(readOnly = true)
     public List<WeekEntry> history(long userId, int limit) {
-        record WeekRow(LocalDate weekStart, BigDecimal weightKg, Integer steps) {
-        }
-        List<WeekRow> weeks = jdbc.sql("""
-                        WITH weeks AS (
-                            SELECT date_trunc('week', m.measured_on)::date AS wk FROM %s
-                            UNION SELECT date_trunc('week', measured_at)::date FROM weight_entry WHERE user_id = :user
-                            UNION SELECT week_start FROM weekly_steps WHERE user_id = :user
-                        ), weight AS (
-                            SELECT date_trunc('week', measured_at)::date AS wk, round(avg(value_kg), 1) AS value_kg
-                            FROM weight_entry WHERE user_id = :user GROUP BY 1
-                        )
-                        SELECT w.wk, weight.value_kg, s.avg_daily_steps
-                        FROM weeks w
-                        LEFT JOIN weight ON weight.wk = w.wk
-                        LEFT JOIN weekly_steps s ON s.user_id = :user AND s.week_start = w.wk
-                        ORDER BY w.wk DESC
-                        LIMIT :limit
-                        """.formatted(ACTIVE_MEASUREMENTS))
-                .param("user", userId)
-                .param("limit", limit)
-                .query((rs, n) -> new WeekRow(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2),
-                        (Integer) rs.getObject(3)))
-                .list();
-        if (weeks.isEmpty()) {
-            return List.of();
-        }
+        Map<LocalDate, List<PartValue>> partsPerWeek = measurements.findLatestPerWeek(userId).stream()
+                .sorted(Comparator.comparing(BodyMeasurementRepository.WeekValue::getSortOrder)
+                        .thenComparing(BodyMeasurementRepository.WeekValue::getPartId))
+                .collect(Collectors.groupingBy(BodyMeasurementRepository.WeekValue::getWeekStart,
+                        Collectors.mapping(v -> new PartValue(v.getPartId(), v.getValueCm()), Collectors.toList())));
+        Map<LocalDate, BigDecimal> weightPerWeek = weights.findWeeklyAverages(userId).stream()
+                .collect(Collectors.toMap(WeightEntryRepository.DatedValue::getDate,
+                        WeightEntryRepository.DatedValue::getValue));
+        Map<LocalDate, Integer> stepsPerWeek = weeklySteps.findByUserId(userId).stream()
+                .collect(Collectors.toMap(WeeklyStepsEntity::getWeekStart, WeeklyStepsEntity::getAvgDailySteps));
 
-        // latest value per (week, part), active parts only, in the parts' display order
-        Map<LocalDate, List<PartValue>> perWeek = new LinkedHashMap<>();
-        jdbc.sql("""
-                        SELECT DISTINCT ON (date_trunc('week', m.measured_on), m.body_part_id)
-                               date_trunc('week', m.measured_on)::date, m.body_part_id, m.value_cm, p.sort_order
-                        FROM %s
-                        WHERE m.measured_on >= :from
-                        ORDER BY date_trunc('week', m.measured_on), m.body_part_id, m.measured_on DESC
-                        """.formatted(ACTIVE_MEASUREMENTS))
-                .param("user", userId)
-                .param("from", weeks.getLast().weekStart())
-                .query((rs, n) -> new Object[]{rs.getObject(1, LocalDate.class), rs.getLong(2), rs.getBigDecimal(3),
-                        rs.getInt(4)})
-                .list().stream()
-                .sorted((a, b) -> Integer.compare((int) a[3], (int) b[3]))
-                .forEach(r -> perWeek.computeIfAbsent((LocalDate) r[0], k -> new ArrayList<>())
-                        .add(new PartValue((Long) r[1], (BigDecimal) r[2])));
-
+        TreeSet<LocalDate> weeks = new TreeSet<>(Comparator.reverseOrder());
+        weeks.addAll(partsPerWeek.keySet());
+        weeks.addAll(weightPerWeek.keySet());
+        weeks.addAll(stepsPerWeek.keySet());
         return weeks.stream()
-                .map(w -> new WeekEntry(w.weekStart(), perWeek.getOrDefault(w.weekStart(), List.of()),
-                        w.weightKg(), w.steps()))
+                .limit(limit)
+                .map(week -> new WeekEntry(week, partsPerWeek.getOrDefault(week, List.of()), weightPerWeek.get(week),
+                        stepsPerWeek.get(week)))
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public ProgressView progress(long userId) {
         LocalDate today = LocalDate.now(clock);
 
         List<BodyPartProgress> parts = new ArrayList<>();
         for (BodyPart part : bodyParts.list(userId)) {
             // the part belongs to the user (listed above), so its measurements do too
-            List<Point> points = jdbc.sql("""
-                            SELECT measured_on, value_cm FROM body_measurement
-                            WHERE body_part_id = :part ORDER BY measured_on
-                            """)
-                    .param("part", part.id())
-                    .query((rs, n) -> new Point(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2)))
-                    .list();
+            List<Point> points = measurements.findByBodyPartIdOrderByMeasuredOn(part.id()).stream()
+                    .map(m -> new Point(m.getMeasuredOn(), m.getValueCm()))
+                    .toList();
             parts.add(new BodyPartProgress(part.id(), part.name(), metric(points, 1), points));
         }
-        List<Point> weightPoints = jdbc.sql("""
-                        SELECT measured_at::date, round(avg(value_kg), 2)
-                        FROM weight_entry WHERE user_id = :user GROUP BY 1 ORDER BY 1
-                        """)
-                .param("user", userId)
-                .query((rs, n) -> new Point(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2)))
-                .list();
+
+        List<Point> weightPoints = weights.findDailyAverages(userId).stream()
+                .map(v -> new Point(v.getDate(), v.getValue()))
+                .toList();
         List<Point> weightTrend = movingAverage(weightPoints, 7);
 
-        LocalDate lastCheckin = jdbc.sql("""
-                        SELECT max(d) FROM (
-                            SELECT max(m.measured_on) AS d FROM %s
-                            UNION ALL SELECT max(measured_at)::date FROM weight_entry
-                                      WHERE user_id = :user AND source = 'MANUAL'
-                            UNION ALL SELECT max(week_start) + 6 FROM weekly_steps WHERE user_id = :user
-                        ) t
-                        """.formatted(ACTIVE_MEASUREMENTS))
-                .param("user", userId)
-                .query(LocalDate.class).optional().orElse(null);
+        LocalDate lastCheckin = Stream.of(
+                        measurements.findLastDate(userId),
+                        weights.findLastManual(userId).map(LocalDateTime::toLocalDate),
+                        // a steps-only check-in "ends" on Sunday
+                        weeklySteps.findLastWeekStart(userId).map(start -> start.plusDays(6)))
+                .flatMap(Optional::stream)
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
         LocalDate weekStart = Weeks.start(today);
         boolean doneThisWeek = lastCheckin != null && !lastCheckin.isBefore(weekStart);
         boolean due = !doneThisWeek
                 && (today.getDayOfWeek() == DayOfWeek.SUNDAY
                 || lastCheckin == null
                 || lastCheckin.isBefore(today.minusDays(7)));
-        // a steps-only check-in "ends" on Sunday; never report a date in the future
+        // never report a date in the future
         if (lastCheckin != null && lastCheckin.isAfter(today)) {
             lastCheckin = today;
         }

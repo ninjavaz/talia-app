@@ -82,7 +82,10 @@ Later maybe: pill-break marking, food ideas, native iOS app.
 ## How to work
 - Small steps: backend skeleton -> sync endpoint + tests -> measurements -> frontend shell + PWA -> charts -> habits -> AI summary -> push -> Docker Compose + Caddyfile.
 - Keep it simple: no microservices, no premature abstractions, one Spring module.
-- **Backend layout (2026-11-13)**: every feature package (`auth`, `activity`, `habit`, `measurement`, `settings`, `sync`)
-  is split into `controller/` (thin REST controllers: HTTP only, no SQL, no logic), `service/` (`*Service` classes with
-  the logic and the SQL via `JdbcClient`) and `model/` (records, DTOs, enums, exceptions - one type per file).
-  Spring/security wiring goes to `auth/config/`; shared helpers stay in `common/` and `config/`.
+- **Backend layout (2026-11-14)**: every feature package (`auth`, `activity`, `habit`, `measurement`, `settings`, `sync`)
+  is split into `controller/` (thin REST controllers: HTTP only, no logic), `service/` (`*Service`, business logic and
+  transactions, no SQL), `repository/` (Spring Data JPA interfaces; derived queries / JPQL first, native `@Query` only
+  for Postgres-specific SQL such as `ON CONFLICT ... RETURNING (xmax = 0)` upserts and `date_trunc` aggregations),
+  `entity/` (`*Entity` JPA classes mapping one table each, `userId` as a plain column instead of relations) and
+  `model/` (API records/DTOs, enums, exceptions - one type per file). Spring/security wiring in `auth/config/`.
+  Flyway owns the schema, Hibernate only validates it (`ddl-auto: validate`).

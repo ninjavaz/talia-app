@@ -1,72 +1,59 @@
 package app.talia.measurement.service;
 
 import app.talia.common.NotFoundException;
+import app.talia.measurement.entity.BodyPartEntity;
 import app.talia.measurement.model.BodyPart;
-import org.springframework.jdbc.core.simple.JdbcClient;
+import app.talia.measurement.repository.BodyPartRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 /** Body measurements the user defined (waist, hips, biceps...); a new account has none. */
 @Service
+@Transactional
 public class BodyPartService {
 
-    private final JdbcClient jdbc;
+    private final BodyPartRepository bodyParts;
 
-    BodyPartService(JdbcClient jdbc) {
-        this.jdbc = jdbc;
+    BodyPartService(BodyPartRepository bodyParts) {
+        this.bodyParts = bodyParts;
     }
 
+    @Transactional(readOnly = true)
     public List<BodyPart> list(long userId) {
-        return jdbc.sql("""
-                        SELECT id, name, sort_order FROM body_part
-                        WHERE user_id = :user AND active ORDER BY sort_order, id
-                        """)
-                .param("user", userId)
-                .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getInt(3)))
-                .list();
+        return bodyParts.findByUserIdAndActiveTrueOrderBySortOrderAscIdAsc(userId).stream()
+                .map(BodyPartService::toModel)
+                .toList();
     }
 
     public BodyPart create(long userId, String name) {
-        long id = jdbc.sql("""
-                        INSERT INTO body_part (user_id, name, sort_order)
-                        VALUES (:user, :name,
-                                (SELECT COALESCE(max(sort_order), 0) + 1 FROM body_part WHERE user_id = :user AND active))
-                        RETURNING id
-                        """)
-                .param("user", userId)
-                .param("name", name.trim())
-                .query(Long.class)
-                .single();
-        return find(userId, id);
+        int sortOrder = bodyParts.findMaxSortOrder(userId) + 1;
+        return toModel(bodyParts.save(new BodyPartEntity(userId, name.trim(), sortOrder)));
     }
 
     public BodyPart rename(long userId, long id, String name) {
-        if (jdbc.sql("UPDATE body_part SET name = :name WHERE id = :id AND user_id = :user AND active")
-                .param("name", name.trim()).param("id", id).param("user", userId).update() == 0) {
-            throw new NotFoundException("Body part not found");
-        }
-        return find(userId, id);
+        BodyPartEntity part = find(userId, id);
+        part.setName(name.trim());
+        return toModel(part);
     }
 
     /** Soft delete: past measurements stay in the database but are no longer shown. */
     public void delete(long userId, long id) {
-        if (jdbc.sql("UPDATE body_part SET active = FALSE WHERE id = :id AND user_id = :user AND active")
-                .param("id", id).param("user", userId).update() == 0) {
-            throw new NotFoundException("Body part not found");
-        }
+        find(userId, id).deactivate();
     }
 
+    @Transactional(readOnly = true)
     public boolean isActive(long userId, long id) {
-        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM body_part WHERE id = :id AND user_id = :user AND active)")
-                .param("id", id).param("user", userId).query(Boolean.class).single();
+        return bodyParts.existsByIdAndUserIdAndActiveTrue(id, userId);
     }
 
-    private BodyPart find(long userId, long id) {
-        return jdbc.sql("SELECT id, name, sort_order FROM body_part WHERE id = :id AND user_id = :user AND active")
-                .param("id", id).param("user", userId)
-                .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getInt(3)))
-                .optional()
+    private BodyPartEntity find(long userId, long id) {
+        return bodyParts.findByIdAndUserIdAndActiveTrue(id, userId)
                 .orElseThrow(() -> new NotFoundException("Body part not found"));
+    }
+
+    private static BodyPart toModel(BodyPartEntity e) {
+        return new BodyPart(e.getId(), e.getName(), e.getSortOrder());
     }
 }
