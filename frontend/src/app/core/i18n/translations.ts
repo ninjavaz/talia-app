@@ -23,7 +23,7 @@ const pl = {
   'common.added': 'Dodano',
   'common.deleted': 'Usunięto',
 
-  'login.slogan': 'Mniej w talii, więcej w Tobie.',
+  'login.slogan': 'Tydzień po tygodniu, lepsza wersja siebie.',
   'login.subtitle': 'Talia, waga, aktywność i nawyki',
   'login.username': 'Login',
   'login.password': 'Hasło',
@@ -180,7 +180,7 @@ const en: Record<TranslationKey, string> = {
   'common.added': 'Added',
   'common.deleted': 'Deleted',
 
-  'login.slogan': 'Less waist, more you.',
+  'login.slogan': 'Week by week, a better version of yourself.',
   'login.subtitle': 'Waist, weight, activity and habits',
   'login.username': 'Username',
   'login.password': 'Password',
