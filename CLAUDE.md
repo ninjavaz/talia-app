@@ -53,8 +53,10 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   (table `weekly_steps`, wins over synced daily steps). One check-in per week, saving again replaces it.
   In-app reminder card on Progress when due (Sunday, or >7 days since the last waist). Habits are a daily checklist on the
   Week screen, workouts are added manually there. Health sync stays as an optional automatic source.
-- **Custom body measurements** (V3): `body_part` (+ built-in `code='WAIST'`, not deletable) and `body_measurement`.
-  The check-in sends `measurements: [{partId, valueCm}]` and *replaces* the week's manual data. Waist stays the headline metric.
+- **Custom body measurements**: `body_part` and `body_measurement`. **No built-in waist (2026-11-14)**: a new account has
+  no body parts, the user adds what they want to measure in Settings (all renamable/deletable). The headline tile on
+  Progress shows the first body part of the list. The check-in sends `measurements: [{partId, valueCm}]` and
+  *replaces* the week's manual data.
 - UX: every save shows a green `TlToast` (`<tl-toaster>` in the app root); checking a habit fires `diamondBurst()` 💎
   (bigger when all habits are done); clickable things have `cursor: pointer` and a subtle hover scale.
 - Pages read `httpResource` data through `safeValue()` (resource.value() throws in error state).

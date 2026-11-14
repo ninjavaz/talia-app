@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Body part 1 is the built-in waist (see IntegrationTest). */
+/** Body part 1 is talia's "Talia" (see IntegrationTest). */
 class CheckinIntegrationTest extends IntegrationTest {
 
     private ResultActions checkin(String json) throws Exception {
@@ -111,11 +111,11 @@ class CheckinIntegrationTest extends IntegrationTest {
 
         mvc.perform(get("/api/progress").with(asUser()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waist.latest").value(78.5))
-                .andExpect(jsonPath("$.waist.delta").value(-1.5))
+                .andExpect(jsonPath("$.bodyParts[0].metric.latest").value(78.5))
+                .andExpect(jsonPath("$.bodyParts[0].metric.delta").value(-1.5))
                 .andExpect(jsonPath("$.weight.delta").value(-1.0))
                 .andExpect(jsonPath("$.bodyParts.length()").value(2))
-                .andExpect(jsonPath("$.bodyParts[0].code").value("WAIST"))
+                .andExpect(jsonPath("$.bodyParts[0].name").value("Talia"))
                 .andExpect(jsonPath("$.bodyParts[1].name").value("Biceps"))
                 .andExpect(jsonPath("$.bodyParts[1].metric.delta").value(-0.5))
                 .andExpect(jsonPath("$.bodyParts[1].points.length()").value(2))
@@ -146,7 +146,7 @@ class CheckinIntegrationTest extends IntegrationTest {
     void emptyProgressIsDue() throws Exception {
         mvc.perform(get("/api/progress").with(asUser()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.waist").doesNotExist())
+                .andExpect(jsonPath("$.bodyParts[0].metric").doesNotExist())
                 .andExpect(jsonPath("$.bodyParts[0].points.length()").value(0))
                 .andExpect(jsonPath("$.checkinDue").value(true));
     }
@@ -168,7 +168,7 @@ class CheckinIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void bodyPartsCanBeAddedRenamedAndHiddenButWaistStays() throws Exception {
+    void bodyPartsCanBeAddedRenamedAndHidden() throws Exception {
         addPart("Biceps");
         mvc.perform(put("/api/body-parts/2").with(asUser()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"Biceps prawy\"}"))
@@ -177,12 +177,12 @@ class CheckinIntegrationTest extends IntegrationTest {
                 {"date": "2026-11-15", "measurements": [{"partId": 2, "valueCm": 28}]}
                 """).andExpect(status().isOk());
 
-        mvc.perform(delete("/api/body-parts/1").with(asUser())).andExpect(status().isBadRequest());
         mvc.perform(delete("/api/body-parts/2").with(asUser())).andExpect(status().isNoContent());
+        mvc.perform(delete("/api/body-parts/2").with(asUser())).andExpect(status().isNotFound());
 
         mvc.perform(get("/api/body-parts").with(asUser()))
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].code").value("WAIST"));
+                .andExpect(jsonPath("$[0].name").value("Talia"));
         // the hidden part's history is kept in the database but not shown
         assertThat(count("body_measurement")).isEqualTo(1);
         mvc.perform(get("/api/checkins").with(asUser())).andExpect(jsonPath("$.length()").value(0));

@@ -32,8 +32,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
  * "Now" is fixed to {@link #NOW}: Sunday 15 Nov 2026, 10:00 in Warsaw (week Mon 9 - Sun 15 Nov).
  * <p>
  * Every test starts with one account "talia" (id 1, password {@link #PASSWORD}, confirmed e-mail
- * talia@example.com) that has the built-in waist
- * (body part 1), three habits (ids 1-3) and the sync token {@link #SYNC_TOKEN}.
+ * talia@example.com) with one body part "Talia" (id 1), three habits (ids 1-3) and the sync token {@link #SYNC_TOKEN}.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -84,6 +83,8 @@ public abstract class IntegrationTest {
                 INSERT INTO habit (user_id, name, sort_order) VALUES
                     (:id, 'Białko w posiłkach', 1), (:id, 'Warzywa do 2 posiłków', 2), (:id, 'Bez słodkich napojów', 3)
                 """).param("id", talia.id()).update();
+        jdbc.sql("INSERT INTO body_part (user_id, name, sort_order) VALUES (:id, 'Talia', 1)")
+                .param("id", talia.id()).update();
     }
 
     /** Requests as the default user "talia". */

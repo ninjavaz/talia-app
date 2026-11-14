@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Weekly check-in (body measurements, weight, average daily steps) and the progress overview of one user.
@@ -189,14 +188,8 @@ public class CheckinService {
                     .param("part", part.id())
                     .query((rs, n) -> new Point(rs.getObject(1, LocalDate.class), rs.getBigDecimal(2)))
                     .list();
-            parts.add(new BodyPartProgress(part.id(), part.name(), part.code(), metric(points, 1), points));
+            parts.add(new BodyPartProgress(part.id(), part.name(), metric(points, 1), points));
         }
-        Metric waist = parts.stream()
-                .filter(p -> BodyPartService.WAIST.equals(p.code()))
-                .map(BodyPartProgress::metric)
-                .filter(Objects::nonNull)
-                .findFirst().orElse(null);
-
         List<Point> weightPoints = jdbc.sql("""
                         SELECT measured_at::date, round(avg(value_kg), 2)
                         FROM weight_entry WHERE user_id = :user GROUP BY 1 ORDER BY 1
@@ -228,7 +221,6 @@ public class CheckinService {
         }
 
         return new ProgressView(
-                waist,
                 metric(weightTrend, 1),
                 parts,
                 weightPoints,

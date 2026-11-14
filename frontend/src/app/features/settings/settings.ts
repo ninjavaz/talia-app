@@ -94,16 +94,14 @@ import { Theme } from '../../core/theme/theme';
     <tl-section-header [title]="'settings.bodyParts' | t" />
     <tl-list>
       @for (b of bodyPartsData() ?? []; track b.id) {
-        <tl-list-item icon="lucideRuler" [title]="b.code === 'WAIST' ? ('progress.waist' | t) : b.name">
+        <tl-list-item icon="lucideRuler" [title]="b.name">
           <span tlListTrailing class="flex gap-1">
-            @if (b.code !== 'WAIST') {
-              <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'settings.renameBodyPart' | t" (click)="renameBodyPart(b)">
-                <ng-icon name="lucidePencil" class="text-muted-foreground" />
-              </button>
-              <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'common.delete' | t" (click)="removeBodyPart(b)">
-                <ng-icon name="lucideTrash2" class="text-muted-foreground" />
-              </button>
-            }
+            <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'settings.renameBodyPart' | t" (click)="renameBodyPart(b)">
+              <ng-icon name="lucidePencil" class="text-muted-foreground" />
+            </button>
+            <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'common.delete' | t" (click)="removeBodyPart(b)">
+              <ng-icon name="lucideTrash2" class="text-muted-foreground" />
+            </button>
           </span>
         </tl-list-item>
       }

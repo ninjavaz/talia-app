@@ -17,7 +17,7 @@ import {
   TlStatTone,
   TlTrendChart,
 } from '@talia/ui';
-import { BodyPartProgress, Metric, Progress, WeekEntry, WeekView, addDays, isoDate, safeValue } from '../../core/api';
+import { Metric, Progress, WeekEntry, WeekView, addDays, isoDate, safeValue } from '../../core/api';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import { CheckinPart, CheckinSheet } from './checkin-sheet';
 
@@ -74,12 +74,14 @@ type ChartMetric = string;
     <tl-panel [title]="'progress.panel' | t">
       @let p = progressData();
       <div class="grid grid-cols-2">
+        <!-- headline: the first body part on the user's list (none until they add one in Settings) -->
+        @let first = p?.bodyParts?.[0];
         <tl-stat
-          [value]="i18n.num(p?.waist?.latest)"
-          [unit]="p?.waist ? 'cm' : null"
-          [label]="'progress.waist' | t"
-          [hint]="deltaText(p?.waist, 'cm')"
-          [tone]="tone(p?.waist)"
+          [value]="i18n.num(first?.metric?.latest)"
+          [unit]="first?.metric ? 'cm' : null"
+          [label]="first?.name ?? ('progress.measurements' | t)"
+          [hint]="p && !first ? ('progress.addParts' | t) : deltaText(first?.metric, 'cm')"
+          [tone]="tone(first?.metric)"
         />
         <tl-stat
           [value]="i18n.num(p?.weight?.latest)"
@@ -171,9 +173,9 @@ export class ProgressPage {
   protected readonly editing = signal<WeekEntry | null>(null);
   protected readonly chartMetric = signal<ChartMetric>('weight');
 
-  /** Active body parts with display labels (the built-in waist is translated). */
+  /** Active body parts of the user, for the check-in form and the chart switch. */
   protected readonly checkinParts = computed<CheckinPart[]>(() =>
-    (this.progressData()?.bodyParts ?? []).map((p) => ({ id: p.id, label: this.partLabel(p) })),
+    (this.progressData()?.bodyParts ?? []).map((p) => ({ id: p.id, label: p.name })),
   );
 
   protected readonly chartOptions = computed(() => [
@@ -243,9 +245,5 @@ export class ProgressPage {
     if (e.weightKg != null) parts.push(`${this.i18n.num(e.weightKg, 1)} kg`);
     if (e.avgDailySteps != null) parts.push(`${this.i18n.num(e.avgDailySteps, 0)} ${this.i18n.t('progress.stepsUnit')}`);
     return parts.join(' · ');
-  }
-
-  private partLabel(p: BodyPartProgress): string {
-    return p.code === 'WAIST' ? this.i18n.t('progress.waist') : p.name;
   }
 }

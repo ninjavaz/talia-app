@@ -91,7 +91,7 @@ public class UserAccountService implements UserDetailsService {
     }
 
     /**
-     * Creates the account with its default settings and the built-in waist measurement.
+     * Creates the account with its default settings (no body parts: the user adds what they want to measure).
      * The e-mail is unverified: login is possible after clicking the link from the e-mail.
      */
     @Transactional
@@ -131,8 +131,6 @@ public class UserAccountService implements UserDetailsService {
         }
         jdbc.sql("INSERT INTO user_settings (user_id, language) VALUES (:id, :language)")
                 .param("id", id).param("language", "en".equals(language) ? "en" : "pl").update();
-        jdbc.sql("INSERT INTO body_part (user_id, name, code, sort_order) VALUES (:id, 'Talia', 'WAIST', 0)")
-                .param("id", id).update();
         return new TaliaUser(id, username, null);
     }
 

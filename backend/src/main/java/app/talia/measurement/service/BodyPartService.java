@@ -1,6 +1,5 @@
 package app.talia.measurement.service;
 
-import app.talia.common.BadRequestException;
 import app.talia.common.NotFoundException;
 import app.talia.measurement.model.BodyPart;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -8,11 +7,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/** User-defined body measurements. The built-in waist (code WAIST) can be renamed but not deleted. */
+/** Body measurements the user defined (waist, hips, biceps...); a new account has none. */
 @Service
 public class BodyPartService {
-
-    public static final String WAIST = "WAIST";
 
     private final JdbcClient jdbc;
 
@@ -22,11 +19,11 @@ public class BodyPartService {
 
     public List<BodyPart> list(long userId) {
         return jdbc.sql("""
-                        SELECT id, name, code, sort_order FROM body_part
+                        SELECT id, name, sort_order FROM body_part
                         WHERE user_id = :user AND active ORDER BY sort_order, id
                         """)
                 .param("user", userId)
-                .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)))
+                .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getInt(3)))
                 .list();
     }
 
@@ -54,12 +51,10 @@ public class BodyPartService {
 
     /** Soft delete: past measurements stay in the database but are no longer shown. */
     public void delete(long userId, long id) {
-        BodyPart part = find(userId, id);
-        if (WAIST.equals(part.code())) {
-            throw new BadRequestException("The waist measurement cannot be deleted");
+        if (jdbc.sql("UPDATE body_part SET active = FALSE WHERE id = :id AND user_id = :user AND active")
+                .param("id", id).param("user", userId).update() == 0) {
+            throw new NotFoundException("Body part not found");
         }
-        jdbc.sql("UPDATE body_part SET active = FALSE WHERE id = :id AND user_id = :user")
-                .param("id", id).param("user", userId).update();
     }
 
     public boolean isActive(long userId, long id) {
@@ -68,9 +63,9 @@ public class BodyPartService {
     }
 
     private BodyPart find(long userId, long id) {
-        return jdbc.sql("SELECT id, name, code, sort_order FROM body_part WHERE id = :id AND user_id = :user AND active")
+        return jdbc.sql("SELECT id, name, sort_order FROM body_part WHERE id = :id AND user_id = :user AND active")
                 .param("id", id).param("user", userId)
-                .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getInt(4)))
+                .query((rs, n) -> new BodyPart(rs.getLong(1), rs.getString(2), rs.getInt(3)))
                 .optional()
                 .orElseThrow(() -> new NotFoundException("Body part not found"));
     }

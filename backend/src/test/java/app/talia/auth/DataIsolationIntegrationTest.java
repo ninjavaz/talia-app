@@ -36,9 +36,8 @@ class DataIsolationIntegrationTest extends IntegrationTest {
     @Test
     void readsOnlyReturnOwnData() throws Exception {
         mvc.perform(get("/api/progress").with(as(ola)))
-                .andExpect(jsonPath("$.waist").doesNotExist())
+                .andExpect(jsonPath("$.bodyParts.length()").value(0))
                 .andExpect(jsonPath("$.weightPoints.length()").value(0))
-                .andExpect(jsonPath("$.bodyParts.length()").value(1))
                 .andExpect(jsonPath("$.avgDailyStepsThisWeek").doesNotExist());
         mvc.perform(get("/api/checkins").with(as(ola))).andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get("/api/week").with(as(ola)))
@@ -61,7 +60,7 @@ class DataIsolationIntegrationTest extends IntegrationTest {
                 .content("{\"name\": \"hacked\"}")).andExpect(status().isNotFound());
         mvc.perform(put("/api/body-parts/1").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\": \"hacked\"}")).andExpect(status().isNotFound());
-        // talia's waist is body part 1; ola cannot write measurements into it
+        // talia's body part 1; ola cannot write measurements into it
         mvc.perform(put("/api/checkins").with(as(ola)).contentType(MediaType.APPLICATION_JSON).content("""
                 {"date": "2026-11-15", "measurements": [{"partId": 1, "valueCm": 99}]}
                 """)).andExpect(status().isBadRequest());

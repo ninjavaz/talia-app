@@ -17,8 +17,6 @@ export interface Metric {
 export interface BodyPart {
   id: number;
   name: string;
-  /** 'WAIST' for the built-in waist, null for user-defined parts. */
-  code: string | null;
   sortOrder: number;
 }
 
@@ -30,13 +28,11 @@ export interface PartValue {
 export interface BodyPartProgress {
   id: number;
   name: string;
-  code: string | null;
   metric: Metric | null;
   points: Point[];
 }
 
 export interface Progress {
-  waist: Metric | null;
   weight: Metric | null;
   bodyParts: BodyPartProgress[];
   weightPoints: Point[];

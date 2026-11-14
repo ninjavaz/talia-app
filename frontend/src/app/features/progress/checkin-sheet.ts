@@ -11,7 +11,7 @@ export interface CheckinPart {
 }
 
 /**
- * Weekly check-in: one field per body part (waist + user-defined ones), weight and average daily steps.
+ * Weekly check-in: one field per body part the user defined, weight and average daily steps.
  * Saving replaces the week's check-in, so the form always starts from the week's current values.
  */
 @Component({
