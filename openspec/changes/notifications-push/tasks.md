@@ -11,7 +11,7 @@
 
 ## 3. Reminders (tests first)
 
-- [ ] 3.1 `PushReminderIntegrationTest` "REQ-030 ...", "REQ-031 ...", "REQ-034 ..." and "REQ-033 settings ..." with a mocked `PushSender`; then `PushReminderService` and the scheduler; verify all backend tests pass
+- [x] 3.1 `PushReminderIntegrationTest` "REQ-030 ...", "REQ-031 ...", "REQ-034 ..." and "REQ-033 settings ..." with a mocked `PushSender`; then `PushReminderService` and the scheduler; verify all backend tests pass
 
 ## 4. Frontend
 

@@ -4,11 +4,9 @@ import app.talia.IntegrationTest;
 import app.talia.auth.model.TaliaUser;
 import app.talia.push.model.SendResult;
 import app.talia.push.service.EcKeys;
-import app.talia.push.service.PushSender;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.util.Base64;
@@ -27,9 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PushSubscriptionIntegrationTest extends IntegrationTest {
 
     private static final String FCM = "https://fcm.googleapis.com/fcm/send/device-";
-
-    @MockitoBean
-    PushSender sender;
 
     private static String deviceKey() {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(EcKeys.raw(EcKeys.generate()));
@@ -137,10 +132,10 @@ class PushSubscriptionIntegrationTest extends IntegrationTest {
     @DisplayName("REQ-033 a test notification goes to the user's devices; gone devices are removed")
     void testNotification() throws Exception {
         subscribe(talia, valid(FCM + "1")).andExpect(status().isNoContent());
-        when(sender.send(any(), any())).thenReturn(SendResult.OK);
+        when(pushSender.send(any(), any())).thenReturn(SendResult.OK);
         mvc.perform(post("/api/push/test").with(asUser())).andExpect(jsonPath("$.sent").value(1));
 
-        when(sender.send(any(), any())).thenReturn(SendResult.GONE);
+        when(pushSender.send(any(), any())).thenReturn(SendResult.GONE);
         mvc.perform(post("/api/push/test").with(asUser())).andExpect(jsonPath("$.sent").value(0));
         assertThat(count()).isZero();
     }
