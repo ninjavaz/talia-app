@@ -2,7 +2,7 @@
 
 ## 1. Database
 
-- [ ] 1.1 Migration `V5__push.sql` (reminder settings, `push_sent`, `push_subscription.last_used_at`) and settings entity/model fields with validation; verify the backend suite passes
+- [x] 1.1 Migration `V5__push.sql` (reminder settings, `push_sent`, `push_subscription.last_used_at`) and settings entity/model fields with validation; verify the backend suite passes
 
 ## 2. Push infrastructure (tests first)
 

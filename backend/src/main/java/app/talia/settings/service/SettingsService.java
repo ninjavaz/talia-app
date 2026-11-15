@@ -27,6 +27,25 @@ public class SettingsService {
         entity.setWeeklyWorkoutGoal(s.weeklyWorkoutGoal());
         entity.setDailyStepsGoal(s.dailyStepsGoal());
         entity.setLanguage(s.language());
+        // reminder settings are optional on update (null keeps the current value)
+        if (s.pushHabits() != null) {
+            entity.setPushHabits(s.pushHabits());
+        }
+        if (s.pushCheckin() != null) {
+            entity.setPushCheckin(s.pushCheckin());
+        }
+        if (s.pushStreak() != null) {
+            entity.setPushStreak(s.pushStreak());
+        }
+        if (s.checkinReminderDay() != null) {
+            entity.setCheckinReminderDay(s.checkinReminderDay());
+        }
+        if (s.checkinReminderTime() != null) {
+            entity.setCheckinReminderTime(s.checkinReminderTime());
+        }
+        if (s.streakReminderTime() != null) {
+            entity.setStreakReminderTime(s.streakReminderTime());
+        }
         return toModel(entity);
     }
 
@@ -36,6 +55,8 @@ public class SettingsService {
     }
 
     private static AppSettings toModel(UserSettingsEntity e) {
-        return new AppSettings(e.getWeeklyWorkoutGoal(), e.getDailyStepsGoal(), e.getLanguage());
+        return new AppSettings(e.getWeeklyWorkoutGoal(), e.getDailyStepsGoal(), e.getLanguage(), e.isPushHabits(),
+                e.isPushCheckin(), e.getCheckinReminderDay(), e.getCheckinReminderTime(), e.isPushStreak(),
+                e.getStreakReminderTime());
     }
 }
