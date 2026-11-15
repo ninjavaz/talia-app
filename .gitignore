@@ -22,3 +22,8 @@ Thumbs.db
 
 # Nx devkit cache left by the Spartan CLI
 .nx/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/

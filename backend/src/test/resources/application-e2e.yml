@@ -1,0 +1,6 @@
+# Backend of the Playwright e2e tests (E2eTaliaApplication); separate ports, so it runs next to the dev servers.
+server:
+  port: 8081
+
+talia:
+  public-url: http://localhost:4300

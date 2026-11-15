@@ -1,0 +1,34 @@
+schema: spec-driven
+
+# Project context, shown to the AI when creating artifacts. Details and agreed decisions live in CLAUDE.md.
+context: |
+  Talia: progress-tracking PWA (iPhone, installed on the home screen). Tracks body measurements, weight,
+  daily habits and workouts. No calorie counting of food. UI languages PL (default) and EN.
+  Backend: Spring Boot 4.1, Java 25, Spring Data JPA, Flyway, PostgreSQL. Feature packages split into
+  controller/service/repository/entity/model. Every table has user_id, every query filters by the logged-in user.
+  Frontend: Angular 22 (zoneless, standalone, signals), Tailwind 4, design system library @talia/ui (tl-* components),
+  own i18n dictionary (core/i18n/translations.ts).
+  Tests: backend integration tests with Testcontainers, frontend unit tests with vitest, e2e with Playwright (frontend/e2e).
+  Requirements are referenced by REQ-ID (REQ-001...).
+
+rules:
+  proposal:
+    - List the REQ-IDs the change covers.
+    - Name contradictions with existing code or CLAUDE.md decisions and how they are resolved.
+  specs:
+    - Every requirement carries its REQ-ID in the title.
+  tasks:
+    - Order inside a change - Flyway migration, backend with Testcontainers tests, frontend, Playwright e2e test.
+    - Write tests from the requirements first, then the implementation. Never change a test just to make it pass.
+    - Every test name contains its REQ-ID (e.g. "REQ-012 check a habit").
+    - Keep tasks small (about 200 lines of diff at most); run the full build after each task.
+    - New UI uses existing tokens and tl-* components; no gradients, no emoji as icons, no lorem ipsum.
+    - Every new text in PL and EN.
+
+operations:
+  apply:
+    guidance:
+      - Ask instead of guessing when a requirement is unclear or conflicts with the code.
+  archive:
+    guidance:
+      - List the assumptions made in the change before archiving.

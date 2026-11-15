@@ -74,6 +74,14 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   i18n: own signal-based dictionary (`core/i18n/translations.ts`, `| t` pipe), not `@angular/localize`.
 - Local dev: `scripts\dev.cmd` (Windows .cmd with CRLF; call `.\mvnw.cmd` with an explicit path).
 - Times stored as local `timestamp` in `Europe/Warsaw` (`talia.timezone`); sync accepts ISO with or without offset.
+- **Requirements REQ-001... (2026-11-15)**, implemented as OpenSpec changes (one per group: measurements, habits,
+  activity, notifications). Agreed with the user (overriding older bullets above where they differ):
+  new accounts get a deletable "Talia" body part again; charts show one point per week (no 7-day moving average);
+  delta from the first real measurement; habit streak counted in **days** (a day counts when all habits active on that
+  day are checked; a habit added later does not break the earlier streak), rule kept in one place; steps are a special
+  habit type (goal from settings) and the steps field of the check-in stays; workout duration stays required;
+  home screen = today's habits + quick workout add (every daily entry <= 2 taps); Web Push in the PWA now;
+  **AI summary (REQ-040/041) and "summary ready" push (REQ-032) stay in v2**.
 
 ## Non-goals
 Calorie counting, recipes, multi-user, social features, native iOS app, photo analysis.
@@ -82,6 +90,13 @@ Later maybe: pill-break marking, food ideas, native iOS app.
 ## How to work
 - Small steps: backend skeleton -> sync endpoint + tests -> measurements -> frontend shell + PWA -> charts -> habits -> AI summary -> push -> Docker Compose + Caddyfile.
 - Keep it simple: no microservices, no premature abstractions, one Spring module.
+- **OpenSpec** (`openspec/`, rules in `openspec/config.yaml`, commands `/opsx:propose`, `/opsx:apply`, `/opsx:archive`):
+  one change per requirement group with REQ-IDs; order migration -> backend + Testcontainers tests -> frontend ->
+  Playwright e2e; tests first, REQ-ID in every test name, tasks up to ~200 lines of diff, full build after each task.
+- **E2e (Playwright)**: `cd frontend && npm run e2e` (Docker needed). Starts its own backend (`E2eTaliaApplication`
+  in the test sources: Testcontainers Postgres, port 8081, profile `e2e`) and `ng serve` on 4300. Every test starts
+  with `POST /api/e2e/reset` (test-only functional endpoint in `E2eSupport`, never in the jar): clean DB + account
+  `e2e`. Tests in `frontend/e2e/*.e2e.ts`, fixtures `test`/`loggedIn` from `e2e/fixtures.ts`, phone viewport.
 - **Backend layout (2026-11-14)**: every feature package (`auth`, `activity`, `habit`, `measurement`, `settings`, `sync`)
   is split into `controller/` (thin REST controllers: HTTP only, no logic), `service/` (`*Service`, business logic and
   transactions, no SQL), `repository/` (Spring Data JPA interfaces; derived queries / JPQL first, native `@Query` only

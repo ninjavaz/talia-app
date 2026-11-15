@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "e2e": "playwright test"
   },
   "private": true,
   "packageManager": "npm@12.0.2",
@@ -34,6 +35,7 @@
     "@angular/build": "^22.2.7",
     "@angular/cli": "^22.2.7",
     "@angular/compiler-cli": "^22.2.0",
+    "@playwright/test": "^1.65.1",
     "@spartan-ng/cli": "^1.9.0",
     "@tailwindcss/postcss": "^4.1.12",
     "jsdom": "^30.0.0",
