@@ -122,6 +122,13 @@ export interface Settings {
   weeklyWorkoutGoal: number;
   dailyStepsGoal: number;
   language: 'pl' | 'en';
+  /** Reminder switches and times (REQ-033); day: 1 = Monday ... 7 = Sunday, times "HH:mm". */
+  pushHabits: boolean;
+  pushCheckin: boolean;
+  checkinReminderDay: number;
+  checkinReminderTime: string;
+  pushStreak: boolean;
+  streakReminderTime: string;
 }
 
 /** Write operations. Reads use `httpResource` in the pages so they reload declaratively. */

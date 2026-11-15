@@ -15,7 +15,7 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 `core/push.ts`, Settings section "Powiadomienia" (device, test, switches, day/time), translations PL/EN, `scripts/vapid-keys.cmd`, README; verify `ng build` and `ng test` pass
+- [x] 4.1 `core/push.ts`, Settings section "Powiadomienia" (device, test, switches, day/time), translations PL/EN, `scripts/vapid-keys.cmd`, README; verify `ng build` and `ng test` pass
 
 ## 5. E2e (Playwright)
 
