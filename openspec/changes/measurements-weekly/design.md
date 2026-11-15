@@ -41,3 +41,15 @@
 - [Clients reading `weightTrend`] → only our own frontend, updated in the same change.
 - [Weekly averaging hides day-to-day changes for Health-synced daily weights] → accepted by REQ-003.
 - [Existing accounts created between 2026-11-14 and now have no waist] → the user can add it in Settings; no migration.
+
+## Assumptions made during implementation
+
+- The weight delta (REQ-004) compares the first and the latest **weekly** point, so with Apple Health weights the
+  "first measurement" is the first week's average. With manual check-ins (one per week) it is the measured value.
+- Weekly weight points are rounded to one decimal (as the check-in history already was).
+- The default body part name follows the registration language and is not renamed when the user later switches the
+  language.
+- The `movingAverage` unit test was removed together with the method, because REQ-003 withdraws the moving average.
+- The registration test and `DataIsolationIntegrationTest` asserted "a fresh account has no body parts"; these
+  assertions were updated to the new requirement (one waist body part), not to make a failing test pass.
+- E2e tests seed earlier weeks through the check-in API and a second weekly weight through the health-sync endpoint.

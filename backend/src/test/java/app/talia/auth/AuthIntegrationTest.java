@@ -1,10 +1,12 @@
 package app.talia.auth;
 
 import app.talia.IntegrationTest;
+import app.talia.auth.model.TaliaUser;
 import app.talia.auth.service.AccountCleanupService;
 import app.talia.common.Hashes;
 import com.jayway.jsonpath.JsonPath;
 import org.altcha.altcha.v2.Altcha;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +26,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -175,8 +179,11 @@ class AuthIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("ola@example.org"))
                 .andReturn().getRequest().getSession(false);
-        // a fresh account has default settings and the language from registration, but no body parts and no data
-        mvc.perform(get("/api/body-parts").session(session)).andExpect(jsonPath("$.length()").value(0));
+        // a fresh account has default settings, the language from registration, the waist body part (REQ-002)
+        // and no data
+        mvc.perform(get("/api/body-parts").session(session))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Waist"));
         mvc.perform(get("/api/habits").session(session)).andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get("/api/settings").session(session))
                 .andExpect(jsonPath("$.weeklyWorkoutGoal").value(3))
@@ -315,5 +322,36 @@ class AuthIntegrationTest extends IntegrationTest {
         mvc.perform(post("/api/health-sync").header("Authorization", "Bearer " + SYNC_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("REQ-002 a new account starts with a waist body part named in its language")
+    void req002NewAccountHasWaist() throws Exception {
+        TaliaUser ola = accounts.create("ola", "ola@example.org", "Moje-Haslo-2026", "pl");
+        TaliaUser ewa = accounts.create("ewa", "ewa@example.org", "Moje-Haslo-2026", "en");
+
+        mvc.perform(get("/api/body-parts").with(as(ola)))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Talia"));
+        mvc.perform(get("/api/body-parts").with(as(ewa)))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Waist"));
+    }
+
+    @Test
+    @DisplayName("REQ-002 the default waist can be renamed and deleted like any body part")
+    void req002DefaultWaistCanBeRenamedAndDeleted() throws Exception {
+        TaliaUser ola = accounts.create("ola", "ola@example.org", "Moje-Haslo-2026", "pl");
+        long waistId = jdbc.sql("SELECT id FROM body_part WHERE user_id = :id").param("id", ola.id())
+                .query(Long.class).single();
+
+        mvc.perform(put("/api/body-parts/" + waistId).with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": \"Talia w pasie\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Talia w pasie"));
+        mvc.perform(delete("/api/body-parts/" + waistId).with(as(ola))).andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/body-parts").with(as(ola))).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/progress").with(as(ola))).andExpect(jsonPath("$.bodyParts.length()").value(0));
     }
 }
