@@ -3,6 +3,7 @@ package app.talia;
 import app.talia.auth.model.TaliaUser;
 import app.talia.auth.service.MailService;
 import app.talia.auth.service.UserAccountService;
+import app.talia.push.service.PushSender;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -68,6 +69,10 @@ public abstract class IntegrationTest {
     /** E-mails are not sent in tests; tests read them from this mock. */
     @MockitoBean
     protected MailService mailer;
+
+    /** Push notifications are not sent in tests; tests read them from this mock (one shared context). */
+    @MockitoBean
+    protected PushSender pushSender;
 
     protected MockMvc mvc;
     protected TaliaUser talia;

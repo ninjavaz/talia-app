@@ -7,3 +7,6 @@ talia:
       # tests solve challenges in Java
       cost: 10
       max-counter: 50
+  push:
+    # tests call PushReminderService.sendDue() themselves (with the fixed clock)
+    reminders-enabled: false

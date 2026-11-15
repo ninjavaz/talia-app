@@ -49,6 +49,20 @@ The backend sends e-mails over plain SMTP, so the provider is switched by config
 
 The sender domain needs SPF and DKIM (the provider gives the DNS records), otherwise e-mails end up in spam.
 
+### Push notifications (production)
+
+Reminders are sent with Web Push. The server needs a fixed VAPID key pair, otherwise every restart uses a new random
+pair and devices have to subscribe again:
+
+| Variable | Example |
+|---|---|
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | printed by `scriptsapid-keys.cmd` (keep the private key secret) |
+| `VAPID_SUBJECT` | `mailto:admin@your-domain.com` (contact for the push services) |
+
+Push only works over HTTPS in a production build (the service worker is off in `ng serve`); on iPhone only in the
+app added to the home screen (iOS 16.4+). The server sends only to the known push services (Google, Mozilla, Apple,
+Microsoft), see `talia.push.allowed-host-suffixes`.
+
 ### Database
 
 The local Postgres 18 runs in Docker ([compose.dev.yml](compose.dev.yml)) on **localhost:5433**, database `talia`,

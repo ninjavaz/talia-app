@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { PushNotifications } from '../core/push';
 import { RouterOutlet } from '@angular/router';
 import { TlBottomNav, TlNavItem } from '@talia/ui';
 import { I18n } from '../core/i18n/i18n';
@@ -17,6 +18,11 @@ import { I18n } from '../core/i18n/i18n';
 })
 export class Shell {
   private readonly i18n = inject(I18n);
+
+  constructor() {
+    // keeps this device's push subscription registered for the logged-in user (REQ-033)
+    void inject(PushNotifications).sync();
+  }
 
   // The AI summary tab is hidden until v2 (features/summary is kept for later).
   protected readonly nav = computed<TlNavItem[]>(() => {

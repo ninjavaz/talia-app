@@ -13,6 +13,7 @@ import { NgIcon } from '@ng-icons/core';
 import {
   TlButton,
   TlCard,
+  TlCheck,
   TlField,
   TlInput,
   TlList,
@@ -31,6 +32,7 @@ import { Auth } from '../../core/auth/auth';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import { Lang, TranslationKey } from '../../core/i18n/translations';
 import { Theme } from '../../core/theme/theme';
+import { PushNotifications } from '../../core/push';
 import { HabitSheet } from './habit-sheet';
 
 @Component({
@@ -44,6 +46,7 @@ import { HabitSheet } from './habit-sheet';
     NgIcon,
     TlButton,
     TlCard,
+    TlCheck,
     TlField,
     TlInput,
     TlList,
@@ -181,6 +184,105 @@ import { HabitSheet } from './habit-sheet';
     </tl-list>
     <p class="text-muted-foreground mt-2 px-2 text-xs">{{ 'settings.bodyPartsHint' | t }}</p>
 
+    <!-- REQ-033: push on this device and the reminder switches -->
+    <tl-section-header [title]="'push.title' | t" />
+    <tl-card data-testid="push-device">
+      @if (!push.supported) {
+        <p class="text-muted-foreground text-sm">{{ 'push.unsupported' | t }}</p>
+      } @else if (push.permission() === 'denied') {
+        <p class="text-muted-foreground text-sm">{{ 'push.denied' | t }}</p>
+      } @else if (push.subscribed()) {
+        <p class="text-sm font-semibold">{{ 'push.enabledHere' | t }}</p>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          <button tlButton variant="secondary" [disabled]="pushBusy()" (click)="testPush()">
+            {{ 'push.test' | t }}
+          </button>
+          <button tlButton variant="secondary" [disabled]="pushBusy()" (click)="disablePush()">
+            {{ 'push.disable' | t }}
+          </button>
+        </div>
+      } @else {
+        <p class="text-muted-foreground mb-3 text-sm">{{ 'push.intro' | t }}</p>
+        <button tlButton class="w-full" [disabled]="pushBusy()" (click)="enablePush()">
+          {{ 'push.enable' | t }}
+        </button>
+      }
+    </tl-card>
+    @if (settingsData(); as s) {
+      <tl-list class="mt-3" data-testid="push-reminders">
+        <tl-list-item
+          icon="lucideListChecks"
+          [title]="'push.habits' | t"
+          [subtitle]="'push.habitsHint' | t"
+        >
+          <button
+            tlListTrailing
+            tlCheck
+            [checked]="s.pushHabits"
+            [attr.aria-label]="'push.habits' | t"
+            (click)="saveReminders({ pushHabits: !s.pushHabits })"
+          ></button>
+        </tl-list-item>
+        <tl-list-item
+          icon="lucideRuler"
+          [title]="'push.checkin' | t"
+          [subtitle]="'push.checkinHint' | t"
+        >
+          <button
+            tlListTrailing
+            tlCheck
+            [checked]="s.pushCheckin"
+            [attr.aria-label]="'push.checkin' | t"
+            (click)="saveReminders({ pushCheckin: !s.pushCheckin })"
+          ></button>
+        </tl-list-item>
+        <tl-list-item
+          icon="lucideGoal"
+          [title]="'push.streak' | t"
+          [subtitle]="'push.streakHint' | t"
+        >
+          <button
+            tlListTrailing
+            tlCheck
+            [checked]="s.pushStreak"
+            [attr.aria-label]="'push.streak' | t"
+            (click)="saveReminders({ pushStreak: !s.pushStreak })"
+          ></button>
+        </tl-list-item>
+      </tl-list>
+      <tl-card class="mt-3">
+        <div class="flex flex-col gap-4">
+          <tl-field [label]="'push.checkinDay' | t">
+            <tl-segmented
+              [options]="dayOptions()"
+              [value]="'' + s.checkinReminderDay"
+              (valueChange)="saveReminders({ checkinReminderDay: +$any($event) })"
+            />
+          </tl-field>
+          <div class="grid grid-cols-2 gap-3">
+            <tl-field [label]="'push.checkinTime' | t">
+              <input
+                tlInput
+                type="time"
+                name="checkinTime"
+                [value]="s.checkinReminderTime"
+                (change)="saveTime('checkinReminderTime', $event)"
+              />
+            </tl-field>
+            <tl-field [label]="'push.streakTime' | t">
+              <input
+                tlInput
+                type="time"
+                name="streakTime"
+                [value]="s.streakReminderTime"
+                (change)="saveTime('streakReminderTime', $event)"
+              />
+            </tl-field>
+          </div>
+        </div>
+      </tl-card>
+    }
+
     <tl-section-header [title]="'settings.appearance' | t" />
     <tl-card>
       <tl-segmented
@@ -314,6 +416,65 @@ export class SettingsPage {
       weeklyWorkoutGoal: Number(this.workoutGoal()),
       dailyStepsGoal: Number(this.stepsGoal().replace(/\s/g, '')),
     });
+  }
+
+  protected readonly push = inject(PushNotifications);
+  protected readonly pushBusy = signal(false);
+
+  protected readonly dayOptions = computed<TlSegmentOption[]>(() => {
+    this.i18n.lang();
+    return [1, 2, 3, 4, 5, 6, 7].map((d) => ({
+      value: String(d),
+      label: this.i18n.t(`push.day${d}` as TranslationKey),
+    }));
+  });
+
+  protected async enablePush(): Promise<void> {
+    await this.pushAction(() => this.push.enable(), 'push.enabled');
+  }
+
+  protected async disablePush(): Promise<void> {
+    await this.pushAction(() => this.push.disable(), 'push.disabled');
+  }
+
+  protected async testPush(): Promise<void> {
+    await this.pushAction(() => this.push.test(), 'push.testSent');
+  }
+
+  private async pushAction(
+    action: () => Promise<unknown>,
+    successKey: TranslationKey,
+  ): Promise<void> {
+    this.pushBusy.set(true);
+    try {
+      await action();
+      this.toast.success(this.i18n.t(successKey));
+    } catch {
+      this.toast.error(this.i18n.t('push.error'));
+    } finally {
+      this.pushBusy.set(false);
+    }
+  }
+
+  /** Reminder settings are saved right away (REQ-033). */
+  protected async saveReminders(patch: Partial<Settings>): Promise<void> {
+    const current = this.settingsData();
+    if (!current) {
+      return;
+    }
+    try {
+      this.settings.set(await this.api.saveSettings({ ...current, ...patch }));
+      this.toast.success(this.i18n.t('common.saved'));
+    } catch {
+      this.toast.error(this.i18n.t('common.saveError'));
+    }
+  }
+
+  protected saveTime(field: 'checkinReminderTime' | 'streakReminderTime', event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    if (/^\d{2}:\d{2}$/.test(value)) {
+      void this.saveReminders({ [field]: value });
+    }
   }
 
   protected openHabit(habit: Habit | null, kind: HabitKind): void {
