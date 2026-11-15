@@ -111,7 +111,7 @@ Later maybe: pill-break marking, food ideas, native iOS app.
   Caddy serves plain `:80`; own domain later via `SITE_ADDRESS`). `deploy/` = `compose.prod.yml` (db, backend, web =
   Caddy + Angular build, backup), `Caddyfile` (CSP, client IP only from `TRUSTED_PROXIES`), `backup.sh`,
   `.env.example`. Images built by `.github/workflows/ci.yml` on `main` -> `ghcr.io/ninjavaz/talia-{backend,web}`
-  (`latest` + SHA). The user runs the server commands himself from `docs/deploy.md`. No inline scripts in
+  (`latest` + SHA). The user runs the server commands himself from `docs/deploy.md`; app directory on the server: `/apps/talia`. No inline scripts in
   `index.html` (CSP `script-src 'self'`).
 - **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
   its own branch from `develop` (e.g. `feature/measurements-weekly`), pushed and opened as a PR into `develop` with
