@@ -6,6 +6,7 @@ A simple PWA for tracking body measurements, weight trend, activity and habits. 
 - `frontend/`: Angular 22, Tailwind 4, Spartan UI (helm in `projects/ui/helm`), PWA
 - `scripts/`: scripts for running locally (Windows)
 - `openspec/`: requirements as OpenSpec changes and specs
+- `deploy/`: production Docker Compose stack, see [docs/deploy.md](docs/deploy.md)
 
 Details and design decisions: [CLAUDE.md](CLAUDE.md).
 
