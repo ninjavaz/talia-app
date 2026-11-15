@@ -32,3 +32,11 @@
 
 - [MET values are rough] → shown with "~" / "ok." and documented here; easy to tune in one map.
 - [Users may read it as calorie counting] → burned calories only, no food input anywhere.
+
+## Assumptions made during implementation
+
+- REQ-022 is a new requirement ID for the kcal estimate agreed with the user on 2026-11-15 (not in the original list).
+- REQ-021 "progress bar" is the existing progress ring on the Week screen.
+- Health kcal values are rounded to whole kcal; a Health value of 0 is treated as unknown and estimated instead.
+- "Weight on the workout day" uses any weight entry (manual check-in or Health) up to the end of that day.
+- The weekly sum is shown only when at least one workout of the week has kcal.

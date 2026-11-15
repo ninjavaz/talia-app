@@ -14,8 +14,8 @@
 
 ## 4. E2e (Playwright)
 
-- [ ] 4.1 `frontend/e2e/activity.e2e.ts`: "REQ-020 workout added with type, date and duration", "REQ-021 weekly goal and progress", "REQ-022 estimated kcal on the list and as weekly sum"; verify `npm run e2e` passes
+- [x] 4.1 `frontend/e2e/activity.e2e.ts`: "REQ-020 workout added with type, date and duration", "REQ-021 weekly goal and progress", "REQ-022 estimated kcal on the list and as weekly sum"; verify `npm run e2e` passes
 
 ## 5. Wrap-up
 
-- [ ] 5.1 Update CLAUDE.md, list assumptions in design.md, full build (backend tests, `ng build`, `ng test`, `npm run e2e`), archive the change in the same PR
+- [x] 5.1 Update CLAUDE.md, list assumptions in design.md, full build (backend tests, `ng build`, `ng test`, `npm run e2e`), archive the change in the same PR
