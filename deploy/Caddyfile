@@ -6,6 +6,8 @@
 # TRUSTED_PROXIES
 #   addresses of the proxy in front of Caddy (the Mikrus proxy); only from them the client IP in
 #   X-Forwarded-For is believed. The backend's per-IP rate limits depend on it (see docs/deploy.md).
+# BACKEND_ADDRESS
+#   where the backend listens (127.0.0.1:8080 with Caddy in the host network)
 {
 	admin off
 	servers {
@@ -36,7 +38,7 @@
 	}
 
 	handle /api/* {
-		reverse_proxy backend:8080 {
+		reverse_proxy {$BACKEND_ADDRESS:backend:8080} {
 			# exactly one address, determined above: the backend takes it as the client IP
 			header_up X-Forwarded-For {client_ip}
 		}

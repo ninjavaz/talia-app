@@ -86,6 +86,12 @@ curl -H "Authorization: Bearer <token from Settings>" -H "Content-Type: applicat
   -d '{"steps":[{"date":"2026-11-13","value":5321}]}' http://localhost:8080/api/health-sync
 ```
 
+## Commits
+
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org), e.g.
+`feat(habits): reorder habits by dragging` or `fix(deploy): trust only the Mikrus proxy`. Enable the check once per
+clone with `scripts\setup-git-hooks.cmd`; CI checks every commit of a pull request too.
+
 ## Tests
 
 ```bat
