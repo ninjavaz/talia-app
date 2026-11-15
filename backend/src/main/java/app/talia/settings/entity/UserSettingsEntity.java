@@ -16,7 +16,6 @@ public class UserSettingsEntity {
 
     private int weeklyWorkoutGoal = 3;
     private int dailyStepsGoal = 8000;
-    private int habitWeekThresholdPct = 70;
     private String language = "pl";
 
     protected UserSettingsEntity() {
@@ -46,14 +45,6 @@ public class UserSettingsEntity {
 
     public void setDailyStepsGoal(int dailyStepsGoal) {
         this.dailyStepsGoal = dailyStepsGoal;
-    }
-
-    public int getHabitWeekThresholdPct() {
-        return habitWeekThresholdPct;
-    }
-
-    public void setHabitWeekThresholdPct(int habitWeekThresholdPct) {
-        this.habitWeekThresholdPct = habitWeekThresholdPct;
     }
 
     public String getLanguage() {

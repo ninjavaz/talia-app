@@ -12,7 +12,8 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 ## MVP scope (build ONLY this)
 1. Measurements – weight (auto from Apple Health via sync + manual fallback), waist cm (manual, weekly), chart with one point per week (weekly average, no moving average - REQ-003), delta since start (kg, cm).
 2. Activity (from Apple Health via sync) – daily steps, workouts (type, duration, date), weekly workout goal with progress bar.
-3. Habits – configurable 3–4 daily habits, one-tap checkbox per day; streak counted in WEEKS (week counts if ≥ X% done).
+3. Habits – configurable daily habits (order, optional time, steps habit), one-tap checkbox per day; streak counted in
+   DAYS (a day counts when all habits active that day are checked; rule in `StreakRule`, REQ-015).
 4. Weekly AI summary – Sunday job: aggregate last 7 days -> LLM (provider behind interface, key in env) -> store short Polish summary (≤ ~5 sentences, supportive but honest).
 5. Web Push – weekly waist reminder; summary ready; alert if no health sync for 48h.
 
@@ -52,7 +53,7 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - **Manual-first (2026-11-13)**: once a week (Sunday) a *check-in* with waist, weight and the week's **average daily steps**
   (table `weekly_steps`, wins over synced daily steps). One check-in per week, saving again replaces it.
   In-app reminder card on Progress when due (Sunday, or >7 days since the last waist). Habits are a daily checklist on the
-  Week screen, workouts are added manually there. Health sync stays as an optional automatic source.
+  Week screen (the home screen since REQ-052), workouts are added manually there. Health sync stays as an optional automatic source.
 - **Custom body measurements**: `body_part` and `body_measurement`. A new account starts with one ordinary body part
   "Talia"/"Waist" (by registration language, REQ-002, 2026-11-15); the user adds more in Settings (all
   renamable/deletable). The headline tile on Progress shows the first body part of the list. The check-in sends `measurements: [{partId, valueCm}]` and
@@ -61,7 +62,9 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   (bigger when all habits are done); clickable things have `cursor: pointer` and a subtle hover scale.
 - Pages read `httpResource` data through `safeValue()` (resource.value() throws in error state).
   Form fields bound with ngModel are signals (zoneless: plain fields set asynchronously don't re-render).
-- Goals, thresholds and habits are **configurable in the UI** (`app_settings` single row + `habit` table).
+- Goals and habits are **configurable in the UI** (`user_settings` row per user + `habit` table). New accounts get the
+  habits "Suplementy", "Picie wody" and the steps habit (`habit.kind = STEPS`, shown as "Kroki: <goal>", one per user).
+  A habit counts for the streak from `created_on` until `deactivated_on` (delete = deactivate).
 - **AI summary postponed to v2** and hidden from the UI for now. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
 - Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
 - **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).

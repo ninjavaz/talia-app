@@ -81,8 +81,7 @@ class ActivityIntegrationTest extends IntegrationTest {
     void settingsCanBeChanged() throws Exception {
         mvc.perform(put("/api/settings").with(asUser()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"weeklyWorkoutGoal": 4, "dailyStepsGoal": 10000, "habitWeekThresholdPct": 80,
-                                 "language": "en"}
+                                {"weeklyWorkoutGoal": 4, "dailyStepsGoal": 10000, "language": "en"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.weeklyWorkoutGoal").value(4));
@@ -90,8 +89,7 @@ class ActivityIntegrationTest extends IntegrationTest {
 
         mvc.perform(put("/api/settings").with(asUser()).contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"weeklyWorkoutGoal": 99, "dailyStepsGoal": 10000, "habitWeekThresholdPct": 80,
-                                 "language": "de"}
+                                {"weeklyWorkoutGoal": 99, "dailyStepsGoal": 10000, "language": "de"}
                                 """))
                 .andExpect(status().isBadRequest());
     }

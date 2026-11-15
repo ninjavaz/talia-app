@@ -32,8 +32,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
  * "Now" is fixed to {@link #NOW}: Sunday 15 Nov 2026, 10:00 in Warsaw (week Mon 9 - Sun 15 Nov).
  * <p>
  * Every test starts with one account "talia" (id 1, password {@link #PASSWORD}, confirmed e-mail
- * talia@example.com) with the default body part "Talia" (id 1, created with the account), three habits (ids 1-3)
- * and the sync token {@link #SYNC_TOKEN}.
+ * talia@example.com) with the default body part "Talia" (id 1) and the default habits (ids 1-3: "Suplementy", "Picie wody",
+ * steps; active since 1 Oct 2026), both created with the account, and the sync token {@link #SYNC_TOKEN}.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -80,10 +80,8 @@ public abstract class IntegrationTest {
         talia = accounts.create("talia", PASSWORD);
         jdbc.sql("UPDATE app_user SET sync_token_hash = :hash WHERE id = :id")
                 .param("hash", SYNC_TOKEN_SHA256).param("id", talia.id()).update();
-        jdbc.sql("""
-                INSERT INTO habit (user_id, name, sort_order) VALUES
-                    (:id, 'Białko w posiłkach', 1), (:id, 'Warzywa do 2 posiłków', 2), (:id, 'Bez słodkich napojów', 3)
-                """).param("id", talia.id()).update();
+        // the default habits (1 "Suplementy", 2 "Picie wody", 3 steps) exist since 1 Oct, so past days can be checked
+        jdbc.sql("UPDATE habit SET created_on = '2026-10-01' WHERE user_id = :id").param("id", talia.id()).update();
     }
 
     /** Requests as the default user "talia". */

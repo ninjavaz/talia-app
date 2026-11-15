@@ -7,6 +7,7 @@ import app.talia.auth.model.TaliaUser;
 import app.talia.auth.model.UsernameTakenException;
 import app.talia.auth.repository.AppUserRepository;
 import app.talia.common.BadRequestException;
+import app.talia.habit.service.HabitService;
 import app.talia.measurement.service.BodyPartService;
 import app.talia.settings.service.SettingsService;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -46,14 +47,16 @@ public class UserAccountService implements UserDetailsService {
     private final AppUserRepository users;
     private final SettingsService settings;
     private final BodyPartService bodyParts;
+    private final HabitService habits;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
     UserAccountService(AppUserRepository users, SettingsService settings, BodyPartService bodyParts,
-                       PasswordEncoder passwordEncoder, Clock clock) {
+                       HabitService habits, PasswordEncoder passwordEncoder, Clock clock) {
         this.users = users;
         this.settings = settings;
         this.bodyParts = bodyParts;
+        this.habits = habits;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -93,7 +96,7 @@ public class UserAccountService implements UserDetailsService {
     }
 
     /**
-     * Creates the account with its default settings and the waist body part (REQ-002).
+     * Creates the account with its default settings, the waist body part (REQ-002) and the default habits (REQ-010).
      * The e-mail is unverified: login is possible after clicking the link from the e-mail.
      */
     public TaliaUser create(String rawUsername, String rawEmail, String password, String language) {
@@ -124,6 +127,7 @@ public class UserAccountService implements UserDetailsService {
         String lang = "en".equals(language) ? "en" : "pl";
         settings.createDefaults(user.getId(), lang);
         bodyParts.createDefaults(user.getId(), lang);
+        habits.createDefaults(user.getId(), lang);
         return new TaliaUser(user.getId(), username, null);
     }
 

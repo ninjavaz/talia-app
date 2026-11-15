@@ -22,8 +22,8 @@ export class Shell {
   protected readonly nav = computed<TlNavItem[]>(() => {
     this.i18n.lang();
     return [
-      { path: 'progress', label: this.i18n.t('nav.progress'), icon: 'lucideTrendingDown' },
       { path: 'week', label: this.i18n.t('nav.week'), icon: 'lucideCalendarCheck' },
+      { path: 'progress', label: this.i18n.t('nav.progress'), icon: 'lucideTrendingDown' },
       { path: 'settings', label: this.i18n.t('nav.settings'), icon: 'lucideSettings' },
     ];
   });

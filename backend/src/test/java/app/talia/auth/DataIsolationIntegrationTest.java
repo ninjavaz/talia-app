@@ -44,8 +44,12 @@ class DataIsolationIntegrationTest extends IntegrationTest {
         mvc.perform(get("/api/checkins").with(as(ola))).andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get("/api/week").with(as(ola)))
                 .andExpect(jsonPath("$.workoutsDone").value(0))
-                .andExpect(jsonPath("$.habits.total").value(0));
-        mvc.perform(get("/api/habits").with(as(ola))).andExpect(jsonPath("$.length()").value(0));
+                // her own default habits (REQ-010), none done
+                .andExpect(jsonPath("$.habits.total").value(3))
+                .andExpect(jsonPath("$.habits.doneToday").value(0));
+        mvc.perform(get("/api/habits").with(as(ola)))
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].id").value(4));
         mvc.perform(get("/api/workouts?from=2026-11-01&to=2026-11-30").with(as(ola)))
                 .andExpect(jsonPath("$.length()").value(0));
 
@@ -72,7 +76,14 @@ class DataIsolationIntegrationTest extends IntegrationTest {
         mvc.perform(get("/api/checkins").with(asUser()))
                 .andExpect(jsonPath("$[0].measurements[0].valueCm").value(78.0))
                 .andExpect(jsonPath("$[0].weightKg").value(64.0));
-        mvc.perform(get("/api/habits").with(asUser())).andExpect(jsonPath("$[0].name").value("Białko w posiłkach"));
+        // talia's habit ids in ola's reorder request are rejected, talia's order stays
+        mvc.perform(put("/api/habits/order").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\": [3, 2, 1]}")).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/habits/order").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\": [6, 5, 4, 1]}")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/habits").with(asUser()))
+                .andExpect(jsonPath("$[0].name").value("Suplementy"))
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 
     @Test

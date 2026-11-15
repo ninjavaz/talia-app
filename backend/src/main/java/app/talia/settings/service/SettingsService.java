@@ -26,7 +26,6 @@ public class SettingsService {
         UserSettingsEntity entity = settings.findById(userId).orElseThrow();
         entity.setWeeklyWorkoutGoal(s.weeklyWorkoutGoal());
         entity.setDailyStepsGoal(s.dailyStepsGoal());
-        entity.setHabitWeekThresholdPct(s.habitWeekThresholdPct());
         entity.setLanguage(s.language());
         return toModel(entity);
     }
@@ -37,7 +36,6 @@ public class SettingsService {
     }
 
     private static AppSettings toModel(UserSettingsEntity e) {
-        return new AppSettings(e.getWeeklyWorkoutGoal(), e.getDailyStepsGoal(), e.getHabitWeekThresholdPct(),
-                e.getLanguage());
+        return new AppSettings(e.getWeeklyWorkoutGoal(), e.getDailyStepsGoal(), e.getLanguage());
     }
 }
