@@ -1,0 +1,34 @@
+#!/bin/sh
+# Checks that the commit message follows Conventional Commits (https://www.conventionalcommits.org):
+#   <type>(<optional scope>)<optional !>: <subject>
+# e.g. "feat(habits): reorder by dragging", "fix(deploy): trust only the Mikrus proxy", "docs: deploy steps".
+# Enable once per clone: git config core.hooksPath .githooks  (scripts\setup-git-hooks.cmd)
+
+first=$(head -n 1 "$1")
+
+# commits created by git itself
+case "$first" in
+  "Merge "* | "Revert \""* | "fixup! "* | "squash! "* | "amend! "*) exit 0 ;;
+esac
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: [^ ].{0,98}$'
+if printf '%s\n' "$first" | grep -Eq "$pattern"; then
+  exit 0
+fi
+
+cat >&2 <<EOF
+
+Commit message does not follow Conventional Commits:
+  $first
+
+Expected: <type>(<scope>): <subject>   (first line at most 100 characters)
+  types:  feat fix docs style refactor perf test build ci chore revert
+  scopes: optional, lower case, e.g. backend frontend habits push deploy
+  breaking change: "feat(api)!: ..." and a "BREAKING CHANGE: ..." line in the body
+Examples:
+  feat(habits): reorder habits by dragging
+  fix(deploy): trust only the Mikrus proxy for the client IP
+  docs: describe the update script
+
+EOF
+exit 1

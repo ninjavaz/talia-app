@@ -113,6 +113,10 @@ Later maybe: pill-break marking, food ideas, native iOS app.
   `.env.example`. Images built by `.github/workflows/ci.yml` on `main` -> `ghcr.io/ninjavaz/talia-{backend,web}`
   (`latest` + SHA). The user runs the server commands himself from `docs/deploy.md`; app directory on the server: `/apps/talia`. No inline scripts in
   `index.html` (CSP `script-src 'self'`).
+- **Commits (2026-11-15)**: Conventional Commits, `<type>(<scope>): <subject>` (types feat fix docs style refactor perf
+  test build ci chore revert; scope optional, lower case, e.g. backend frontend habits push deploy; first line <= 100
+  chars, English). Enforced by `.githooks/commit-msg` (enable per clone: `scripts\setup-git-hooks.cmd`) and by the
+  `commits` job in CI for every commit of a pull request. PR titles follow the same format.
 - **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
   its own branch from `develop` (e.g. `feature/measurements-weekly`), pushed and opened as a PR into `develop` with
   `gh pr create --base develop`; the user decides when to merge (merging happens from here with `gh pr merge`).
