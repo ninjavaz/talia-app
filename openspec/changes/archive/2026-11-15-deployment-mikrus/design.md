@@ -29,3 +29,13 @@
 - [Mikrus proxy IP unknown until deployed] -> until `TRUSTED_PROXIES` is set, all users share the proxy's IP for the
   rate limits (fail-safe: limits are stricter, not looser).
 - [CI cannot run the Playwright e2e cheaply] -> e2e stays local; CI runs unit and integration tests.
+
+## Assumptions and findings during implementation
+
+- Verified locally with the production stack; three issues found and fixed: an empty `MAIL_FROM` in compose overrode
+  the default (backend did not start), Angular's critical CSS inlining (Beasties) added an inline script blocked by
+  the CSP (disabled), and the first backup ran before the schema existed (now nightly at 03:00 UTC).
+- `backend/mvnw` lacked the executable bit in git (repository created on Windows); fixed for CI and image builds.
+- GitGuardian flagged `POSTGRES_PASSWORD: ${DB_PASSWORD:?...}` as a generic password: a false positive (only a variable
+  reference); the line was simplified, the incident on the old commit is to be marked as false positive.
+- The server architecture is assumed to be x86_64 (images are built for linux/amd64); docs step 1 checks it.
