@@ -1,4 +1,4 @@
-# Talia – project brief
+# Talia (shown to users as "MyTalia") – project brief
 
 Personal progress-tracking PWA for ONE user (iPhone). Dead-simple tracking of waist + weight trend,
 activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mobile-first, installed as PWA on iOS home screen.

@@ -158,7 +158,7 @@ class AuthIntegrationTest extends IntegrationTest {
         register("Ola.K", " Ola@Example.org ", "Moje-Haslo-2026", solvedAltcha(ip), "", ip)
                 .andExpect(status().isAccepted());
         String verifyToken = lastLinkToken("ola@example.org");
-        assertThat(mailsTo("ola@example.org").getFirst()[0]).isEqualTo("Confirm your e-mail - Talia");
+        assertThat(mailsTo("ola@example.org").getFirst()[0]).isEqualTo("Confirm your e-mail - MyTalia");
 
         // the right password, but not confirmed yet: no session, and a fresh link is sent
         login("ola.k", "Moje-Haslo-2026", ip)
@@ -204,7 +204,7 @@ class AuthIntegrationTest extends IntegrationTest {
         assertThat(jdbc.sql("SELECT count(*) FROM app_user").query(Integer.class).single()).isEqualTo(1);
         List<String[]> mails = mailsTo("talia@example.com");
         assertThat(mails).hasSize(1);
-        assertThat(mails.getFirst()[0]).isEqualTo("Masz już konto - Talia");
+        assertThat(mails.getFirst()[0]).isEqualTo("Masz już konto - MyTalia");
         assertThat(mails.getFirst()[1]).contains("„talia”").doesNotContain("#t=");
     }
 
