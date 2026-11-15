@@ -37,6 +37,7 @@ mkdir -p /apps/talia && cd /apps/talia
 base=https://raw.githubusercontent.com/ninjavaz/talia-app/main/deploy
 curl -fsSLO "$base/compose.prod.yml"
 curl -fsSLO "$base/backup.sh"
+curl -fsSLO "$base/update.sh" && chmod +x update.sh
 curl -fsSL "$base/.env.example" -o .env
 chmod 600 .env
 mkdir -p backups
@@ -117,19 +118,21 @@ from the home screen (iOS 16.4+).
 
 ## 9. Updates and rollback
 
-Every merge to `main` publishes new images (tagged `latest` and with the commit SHA). To update:
+Every merge to `main` publishes new images (tagged `latest` and with the commit SHA). When the `CI` workflow on
+`main` is green (about 5-8 minutes after the merge), update the server with one command:
 
 ```bash
 cd /apps/talia
-docker compose -f compose.prod.yml pull
-docker compose -f compose.prod.yml up -d
-docker image prune -f                          # free disk space (old images)
+./update.sh
 ```
 
-Rollback: set `TAG=<commit sha>` in `.env` and run the two commands again. Database migrations only go forward, so
-roll back only to a version with the same migrations, or restore a backup.
+`update.sh` refreshes `compose.prod.yml`, `backup.sh` and itself from GitHub, makes a database backup
+(`backups/before-update-*.sql.gz`, kept 30 days), pulls the images, restarts, waits until the backend is healthy
+(database migrations run at its start) and removes old images. It never changes `.env`, except `TAG` below.
 
-When `compose.prod.yml` or `backup.sh` change in the repository, download them again (section 3, without `.env`).
+Rollback to an earlier version: `./update.sh <commit sha>` (the SHA of a commit on `main`, e.g. from the GitHub
+history); back to the newest: `./update.sh latest`. Database migrations only go forward, so roll back only to a
+version with the same migrations, or restore the backup made before the update (section 10).
 
 ## 10. Backups
 
