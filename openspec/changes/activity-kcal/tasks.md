@@ -6,7 +6,7 @@
 
 ## 2. Backend implementation
 
-- [ ] 2.1 `CalorieEstimate`, `WeightService.weightOn`, `Workout.kcal`/`kcalEstimated`, `WeekView.kcalTotal`; verify all backend tests pass (`mvnw test`)
+- [x] 2.1 `CalorieEstimate`, `WeightService.weightOn`, `Workout.kcal`/`kcalEstimated`, `WeekView.kcalTotal`; verify all backend tests pass (`mvnw test`)
 
 ## 3. Frontend
 
