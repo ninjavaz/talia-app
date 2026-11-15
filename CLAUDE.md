@@ -66,7 +66,14 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   habits "Suplementy", "Picie wody" and the steps habit (`habit.kind = STEPS`, shown as "Kroki: <goal>", one per user).
   A habit counts for the streak from `created_on` until `deactivated_on` (delete = deactivate).
 - **AI summary postponed to v2** and hidden from the UI for now. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
-- Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
+- **Push (2026-11-15, REQ-030/031/033/034)**: package `push`. Web Push implemented with JDK crypto only (`WebPushCrypto`
+  = RFC 8291, verified with the RFC test vector; `Vapid` = RFC 8292). VAPID keys from env `VAPID_PUBLIC_KEY` /
+  `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (`scripts\vapid-keys.cmd`; without them a random pair per start, dev only).
+  SSRF guard: only `talia.push.allowed-host-suffixes` over HTTPS (`PushEndpoints`). `PushReminderService.sendDue()`
+  runs every minute (`PushScheduler`, off in tests via `talia.push.reminders-enabled=false`): habit at its time,
+  weekly check-in (default Sun 10:00), streak at risk (default 20:00); due = within the last 30 min, sent once via
+  `push_sent` claim. Tests use the shared `pushSender` mock from `IntegrationTest`. No 48h-sync alert; "summary ready"
+  (REQ-032) comes with the AI summary in v2.
 - **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).
 - **Frontend**: Angular 22 (zoneless, standalone, signals), Tailwind 4 via postcss, **Spartan UI** like the cook-less project
   (brain from npm, helm generated into `frontend/projects/ui/helm`, alias `@ui/*`, style `nova`). **No Nx**, plain Angular CLI.

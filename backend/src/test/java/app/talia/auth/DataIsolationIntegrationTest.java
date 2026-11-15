@@ -2,10 +2,19 @@ package app.talia.auth;
 
 import app.talia.IntegrationTest;
 import app.talia.auth.model.TaliaUser;
+import app.talia.push.model.SendResult;
+import app.talia.push.service.PushReminderService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DataIsolationIntegrationTest extends IntegrationTest {
 
     private TaliaUser ola;
+
+    @Autowired
+    PushReminderService reminders;
 
     @BeforeEach
     void talliaHasDataOlaHasNone() throws Exception {
@@ -90,5 +102,29 @@ class DataIsolationIntegrationTest extends IntegrationTest {
     void syncTokenWritesOnlyIntoItsOwnersAccount() throws Exception {
         mvc.perform(get("/api/week?date=2026-11-14").with(as(ola)))
                 .andExpect(jsonPath("$.avgDailySteps").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("REQ-051 push devices, test notifications and reminders stay within the account")
+    void pushStaysWithinTheAccount() throws Exception {
+        jdbc.sql("""
+                INSERT INTO push_subscription (user_id, endpoint, p256dh, auth)
+                VALUES (1, 'https://fcm.googleapis.com/fcm/send/talia', 'key', 'auth')
+                """).update();
+        when(pushSender.send(any(), any())).thenReturn(SendResult.OK);
+
+        // ola's test notification reaches none of talia's devices, and she cannot remove talia's device
+        mvc.perform(post("/api/push/test").with(as(ola))).andExpect(jsonPath("$.sent").value(0));
+        mvc.perform(delete("/api/push/subscriptions").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endpoint\": \"https://fcm.googleapis.com/fcm/send/talia\"}"))
+                .andExpect(status().isNoContent());
+        verify(pushSender, never()).send(any(), any());
+        assertThat(jdbc.sql("SELECT count(*) FROM push_subscription").query(Integer.class).single()).isEqualTo(1);
+
+        // ola's habit with a time does not remind talia
+        jdbc.sql("UPDATE habit SET remind_at = '10:00' WHERE user_id = :id").param("id", ola.id()).update();
+        jdbc.sql("UPDATE user_settings SET push_checkin = false, push_streak = false").update();
+        reminders.sendDue();
+        verify(pushSender, never()).send(any(), any());
     }
 }

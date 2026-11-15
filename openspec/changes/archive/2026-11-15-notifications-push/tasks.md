@@ -19,8 +19,8 @@
 
 ## 5. E2e (Playwright)
 
-- [ ] 5.1 `frontend/e2e/notifications.e2e.ts`: "REQ-033 reminder switches, day and time are saved" and "REQ-033 device push needs the installed app" (dev server has no service worker); verify `npm run e2e` passes
+- [x] 5.1 `frontend/e2e/notifications.e2e.ts`: "REQ-033 reminder switches, day and time are saved" and "REQ-033 device push needs the installed app" (dev server has no service worker); verify `npm run e2e` passes
 
 ## 6. Wrap-up
 
-- [ ] 6.1 Update CLAUDE.md, list assumptions in design.md, full build (backend tests, `ng build`, `ng test`, `npm run e2e`), archive the change in the same PR
+- [x] 6.1 Update CLAUDE.md, list assumptions in design.md, full build (backend tests, `ng build`, `ng test`, `npm run e2e`), archive the change in the same PR

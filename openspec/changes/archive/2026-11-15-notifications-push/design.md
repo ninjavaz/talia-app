@@ -58,3 +58,19 @@
 - [Real delivery cannot be tested in CI/e2e] → e2e covers settings only; delivery is tested manually on the phone
   after deployment (HTTPS needed).
 - [Ephemeral dev keys] → only when env keys are missing; production must set them (documented in README).
+
+## Assumptions made during implementation
+
+- REQ-034 is a new requirement ID for the agreed "streak at risk" evening push (not in the original list).
+- Reminder settings are per user (all devices of the user get the same reminders); the reminder fields of
+  `PUT /api/settings` are optional (null keeps the value), so older clients keep working.
+- The weekly check-in reminder is skipped when any manual check-in value of the current week exists
+  (`checkinDoneThisWeek`), not only when the waist is missing.
+- The streak reminder title shows the current streak in days when it is above 0, otherwise "Nawyki na dziś".
+- A device that subscribes again while logged in to another account moves to that account.
+- Real delivery to a phone cannot be tested automatically (no service worker on the dev server, push services need
+  the internet); it is covered by the RFC test vector, a local HTTP server test with independent decryption and a
+  manual check after deployment.
+- The scheduler is disabled in the test profile (also used by the e2e backend); tests call `sendDue()` directly.
+- `PushSender` is mocked once in `IntegrationTest` instead of per test class, so all integration tests share one
+  Spring context (backend suite 10+ min -> about 1.5 min).
