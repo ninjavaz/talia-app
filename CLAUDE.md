@@ -113,6 +113,9 @@ Later maybe: pill-break marking, food ideas, native iOS app.
   `.env.example`. Images built by `.github/workflows/ci.yml` on `main` -> `ghcr.io/ninjavaz/talia-{backend,web}`
   (`latest` + SHA). The user runs the server commands himself from `docs/deploy.md`; app directory on the server: `/apps/talia`. No inline scripts in
   `index.html` (CSP `script-src 'self'`).
+- **Planned: Cloudflare Tunnel (2026-11-15)**: after buying `mytalia.app`, switch from the Mikrus gateway (trusted
+  `TRUSTED_PROXIES` /64, undocumented address) to a Cloudflare Tunnel (`cloudflared`, no public port, client IP only
+  via loopback). Plan: `openspec/changes/cloudflare-tunnel/`.
 - **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
   its own branch from `develop` (e.g. `feature/measurements-weekly`), pushed and opened as a PR into `develop` with
   `gh pr create --base develop`; the user decides when to merge (merging happens from here with `gh pr merge`).
