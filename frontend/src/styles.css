@@ -127,3 +127,32 @@
     overscroll-behavior-y: none;
   }
 }
+
+/*
+ * Angular CDK drag & drop (habit order in Settings). The dragged row is cloned into <body> as the preview.
+ * The CDK reads the preview's transition to time the drop animation; the Tailwind `transition` utility on list
+ * rows lists several properties with one duration, which the CDK cannot parse, so these rules set one transition.
+ */
+.cdk-drag-preview {
+  box-sizing: border-box;
+  padding-inline: 1rem;
+  border-radius: 1.25rem;
+  background: var(--card);
+  color: var(--card-foreground);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.18);
+  transition-property: transform;
+  transition-duration: 0ms;
+}
+.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+.cdk-drag-animating {
+  transition-property: transform;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
+  transition-property: transform;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}

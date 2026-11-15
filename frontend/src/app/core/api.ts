@@ -36,7 +36,6 @@ export interface Progress {
   weight: Metric | null;
   bodyParts: BodyPartProgress[];
   weightPoints: Point[];
-  weightTrend: Point[];
   avgDailyStepsThisWeek: number | null;
   avgDailyStepsLastWeek: number | null;
   dailyStepsGoal: number;
@@ -67,15 +66,16 @@ export interface Workout {
   durationMin: number;
   type: string;
   category: WorkoutCategory;
+  /** Burned kcal: from Apple Health, or estimated (REQ-022); null without a weight. */
   kcal: number | null;
+  kcalEstimated: boolean;
 }
 
+/** doneToday / total: today's progress (REQ-014); streakDays: consecutive completed days (REQ-015). */
 export interface HabitStats {
   doneToday: number;
   total: number;
-  weekPct: number;
-  thresholdPct: number;
-  streakWeeks: number;
+  streakDays: number;
 }
 
 export interface WeekView {
@@ -84,28 +84,51 @@ export interface WeekView {
   workoutGoal: number;
   workoutsDone: number;
   workouts: Workout[];
+  /** Sum of the week's workout kcal (REQ-022), null when none has kcal. */
+  kcalTotal: number | null;
   avgDailySteps: number | null;
   dailyStepsGoal: number;
   habits: HabitStats;
 }
 
+/** STEPS: "daily steps goal reached", shown with the goal instead of its name (REQ-013). */
+export type HabitKind = 'NORMAL' | 'STEPS';
+
 export interface Habit {
   id: number;
   name: string;
+  kind: HabitKind;
+  /** "HH:mm" or null (REQ-011). */
+  remindAt: string | null;
   sortOrder: number;
 }
 
 export interface HabitDay {
   id: number;
   name: string;
+  kind: HabitKind;
+  remindAt: string | null;
   done: boolean;
+}
+
+/** Create/update body: `name` must be null for the steps habit; `kind` is only read on create. */
+export interface HabitInput {
+  name: string | null;
+  remindAt: string | null;
+  kind?: HabitKind;
 }
 
 export interface Settings {
   weeklyWorkoutGoal: number;
   dailyStepsGoal: number;
-  habitWeekThresholdPct: number;
   language: 'pl' | 'en';
+  /** Reminder switches and times (REQ-033); day: 1 = Monday ... 7 = Sunday, times "HH:mm". */
+  pushHabits: boolean;
+  pushCheckin: boolean;
+  checkinReminderDay: number;
+  checkinReminderTime: string;
+  pushStreak: boolean;
+  streakReminderTime: string;
 }
 
 /** Write operations. Reads use `httpResource` in the pages so they reload declaratively. */
@@ -121,7 +144,11 @@ export class Api {
     return firstValueFrom(this.http.delete(`/api/checkins/${weekStart}`));
   }
 
-  addWorkout(body: { date: string; category: WorkoutCategory; durationMin: number }): Promise<Workout> {
+  addWorkout(body: {
+    date: string;
+    category: WorkoutCategory;
+    durationMin: number;
+  }): Promise<Workout> {
     return firstValueFrom(this.http.post<Workout>('/api/workouts', body));
   }
 
@@ -134,12 +161,16 @@ export class Api {
     return firstValueFrom(done ? this.http.put(url, null) : this.http.delete(url));
   }
 
-  addHabit(name: string): Promise<Habit> {
-    return firstValueFrom(this.http.post<Habit>('/api/habits', { name }));
+  addHabit(body: HabitInput): Promise<Habit> {
+    return firstValueFrom(this.http.post<Habit>('/api/habits', body));
   }
 
-  renameHabit(id: number, name: string): Promise<Habit> {
-    return firstValueFrom(this.http.put<Habit>(`/api/habits/${id}`, { name }));
+  updateHabit(id: number, body: HabitInput): Promise<Habit> {
+    return firstValueFrom(this.http.put<Habit>(`/api/habits/${id}`, body));
+  }
+
+  reorderHabits(ids: number[]): Promise<unknown> {
+    return firstValueFrom(this.http.put('/api/habits/order', { ids }));
   }
 
   deleteHabit(id: number): Promise<unknown> {
@@ -195,6 +226,9 @@ export function parseDecimal(raw: string | null | undefined): number | null {
  * Angular's resource.value() throws while the resource is in an error state; templates read this instead,
  * which is simply undefined until data is available (and stays on the last good value on reload).
  */
-export function safeValue<T>(resource: { hasValue(): boolean; value(): T | undefined }): Signal<T | undefined> {
+export function safeValue<T>(resource: {
+  hasValue(): boolean;
+  value(): T | undefined;
+}): Signal<T | undefined> {
   return computed(() => (resource.hasValue() ? resource.value() : undefined));
 }

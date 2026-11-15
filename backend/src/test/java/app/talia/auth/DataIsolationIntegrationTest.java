@@ -2,10 +2,19 @@ package app.talia.auth;
 
 import app.talia.IntegrationTest;
 import app.talia.auth.model.TaliaUser;
+import app.talia.push.model.SendResult;
+import app.talia.push.service.PushReminderService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class DataIsolationIntegrationTest extends IntegrationTest {
 
     private TaliaUser ola;
+
+    @Autowired
+    PushReminderService reminders;
 
     @BeforeEach
     void talliaHasDataOlaHasNone() throws Exception {
@@ -36,14 +48,20 @@ class DataIsolationIntegrationTest extends IntegrationTest {
     @Test
     void readsOnlyReturnOwnData() throws Exception {
         mvc.perform(get("/api/progress").with(as(ola)))
-                .andExpect(jsonPath("$.bodyParts.length()").value(0))
+                // only her own default waist (REQ-002), without values
+                .andExpect(jsonPath("$.bodyParts.length()").value(1))
+                .andExpect(jsonPath("$.bodyParts[0].points.length()").value(0))
                 .andExpect(jsonPath("$.weightPoints.length()").value(0))
                 .andExpect(jsonPath("$.avgDailyStepsThisWeek").doesNotExist());
         mvc.perform(get("/api/checkins").with(as(ola))).andExpect(jsonPath("$.length()").value(0));
         mvc.perform(get("/api/week").with(as(ola)))
                 .andExpect(jsonPath("$.workoutsDone").value(0))
-                .andExpect(jsonPath("$.habits.total").value(0));
-        mvc.perform(get("/api/habits").with(as(ola))).andExpect(jsonPath("$.length()").value(0));
+                // her own default habits (REQ-010), none done
+                .andExpect(jsonPath("$.habits.total").value(3))
+                .andExpect(jsonPath("$.habits.doneToday").value(0));
+        mvc.perform(get("/api/habits").with(as(ola)))
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].id").value(4));
         mvc.perform(get("/api/workouts?from=2026-11-01&to=2026-11-30").with(as(ola)))
                 .andExpect(jsonPath("$.length()").value(0));
 
@@ -70,12 +88,43 @@ class DataIsolationIntegrationTest extends IntegrationTest {
         mvc.perform(get("/api/checkins").with(asUser()))
                 .andExpect(jsonPath("$[0].measurements[0].valueCm").value(78.0))
                 .andExpect(jsonPath("$[0].weightKg").value(64.0));
-        mvc.perform(get("/api/habits").with(asUser())).andExpect(jsonPath("$[0].name").value("Białko w posiłkach"));
+        // talia's habit ids in ola's reorder request are rejected, talia's order stays
+        mvc.perform(put("/api/habits/order").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\": [3, 2, 1]}")).andExpect(status().isBadRequest());
+        mvc.perform(put("/api/habits/order").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\": [6, 5, 4, 1]}")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/habits").with(asUser()))
+                .andExpect(jsonPath("$[0].name").value("Suplementy"))
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 
     @Test
     void syncTokenWritesOnlyIntoItsOwnersAccount() throws Exception {
         mvc.perform(get("/api/week?date=2026-11-14").with(as(ola)))
                 .andExpect(jsonPath("$.avgDailySteps").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("REQ-051 push devices, test notifications and reminders stay within the account")
+    void pushStaysWithinTheAccount() throws Exception {
+        jdbc.sql("""
+                INSERT INTO push_subscription (user_id, endpoint, p256dh, auth)
+                VALUES (1, 'https://fcm.googleapis.com/fcm/send/talia', 'key', 'auth')
+                """).update();
+        when(pushSender.send(any(), any())).thenReturn(SendResult.OK);
+
+        // ola's test notification reaches none of talia's devices, and she cannot remove talia's device
+        mvc.perform(post("/api/push/test").with(as(ola))).andExpect(jsonPath("$.sent").value(0));
+        mvc.perform(delete("/api/push/subscriptions").with(as(ola)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"endpoint\": \"https://fcm.googleapis.com/fcm/send/talia\"}"))
+                .andExpect(status().isNoContent());
+        verify(pushSender, never()).send(any(), any());
+        assertThat(jdbc.sql("SELECT count(*) FROM push_subscription").query(Integer.class).single()).isEqualTo(1);
+
+        // ola's habit with a time does not remind talia
+        jdbc.sql("UPDATE habit SET remind_at = '10:00' WHERE user_id = :id").param("id", ola.id()).update();
+        jdbc.sql("UPDATE user_settings SET push_checkin = false, push_streak = false").update();
+        reminders.sendDue();
+        verify(pushSender, never()).send(any(), any());
     }
 }

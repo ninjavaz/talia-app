@@ -7,7 +7,6 @@ public record ProgressView(
         Metric weight,
         List<BodyPartProgress> bodyParts,
         List<Point> weightPoints,
-        List<Point> weightTrend,
         Integer avgDailyStepsThisWeek,
         Integer avgDailyStepsLastWeek,
         int dailyStepsGoal,

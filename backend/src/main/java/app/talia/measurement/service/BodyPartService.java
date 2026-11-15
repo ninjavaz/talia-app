@@ -32,6 +32,11 @@ public class BodyPartService {
         return toModel(bodyParts.save(new BodyPartEntity(userId, name.trim(), sortOrder)));
     }
 
+    /** REQ-002: a new account starts with the waist, an ordinary body part (can be renamed and deleted). */
+    public void createDefaults(long userId, String language) {
+        create(userId, "en".equals(language) ? "Waist" : "Talia");
+    }
+
     public BodyPart rename(long userId, long id, String name) {
         BodyPartEntity part = find(userId, id);
         part.setName(name.trim());

@@ -27,3 +27,7 @@ Thumbs.db
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+
+# Deployment (secrets and database dumps stay on the server)
+deploy/.env
+deploy/backups/

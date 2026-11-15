@@ -1,15 +1,12 @@
 package app.talia.measurement;
 
 import app.talia.IntegrationTest;
-import app.talia.measurement.model.Point;
-import app.talia.measurement.service.CheckinService;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -188,14 +185,98 @@ class CheckinIntegrationTest extends IntegrationTest {
         mvc.perform(get("/api/checkins").with(asUser())).andExpect(jsonPath("$.length()").value(0));
     }
 
+    private void healthWeight(String measuredAt, String kg) {
+        jdbc.sql("INSERT INTO weight_entry (user_id, measured_at, value_kg, source) VALUES (1, CAST(:at AS timestamp), :kg, 'HEALTH')")
+                .param("at", measuredAt).param("kg", new BigDecimal(kg)).update();
+    }
+
     @Test
-    void movingAverageUsesTheLastSevenDays() {
-        var points = List.of(
-                new Point(LocalDate.parse("2026-11-01"), new BigDecimal("65")),
-                new Point(LocalDate.parse("2026-11-03"), new BigDecimal("64")),
-                new Point(LocalDate.parse("2026-11-10"), new BigDecimal("63")));
-        var trend = CheckinService.movingAverage(points, 7);
-        assertThat(trend.get(1).value()).isEqualByComparingTo("64.5");
-        assertThat(trend.get(2).value()).isEqualByComparingTo("63");
+    @DisplayName("REQ-001 weight is saved with its date in the weekly check-in")
+    void req001WeightSavedWithDate() throws Exception {
+        checkin("{\"date\": \"2026-11-15\", \"weightKg\": 68.4}").andExpect(status().isOk());
+
+        mvc.perform(get("/api/checkins").with(asUser()))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].weekStart").value("2026-11-09"))
+                .andExpect(jsonPath("$[0].weightKg").value(68.4));
+        assertThat(jdbc.sql("SELECT measured_at::date::text FROM weight_entry").query(String.class).single())
+                .isEqualTo("2026-11-15");
+    }
+
+    @Test
+    @DisplayName("REQ-001 a second check-in in the same week replaces the first")
+    void req001SecondCheckinReplacesFirst() throws Exception {
+        checkin("{\"date\": \"2026-11-09\", \"weightKg\": 68.4}").andExpect(status().isOk());
+        checkin("{\"date\": \"2026-11-15\", \"weightKg\": 68.0}").andExpect(status().isOk());
+
+        mvc.perform(get("/api/checkins").with(asUser()))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].weightKg").value(68.0));
+        assertThat(count("weight_entry")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("REQ-001 invalid weight or a future date is rejected")
+    void req001InvalidWeightOrDateRejected() throws Exception {
+        checkin("{\"date\": \"2026-11-15\", \"weightKg\": 19.9}").andExpect(status().isBadRequest());
+        checkin("{\"date\": \"2026-11-15\", \"weightKg\": 400.1}").andExpect(status().isBadRequest());
+        checkin("{\"date\": \"2026-11-16\", \"weightKg\": 68}").andExpect(status().isBadRequest());
+        assertThat(count("weight_entry")).isZero();
+    }
+
+    @Test
+    @DisplayName("REQ-003 several weights in one week give one point dated on the last entry")
+    void req003OneWeightPointPerWeek() throws Exception {
+        healthWeight("2026-11-11 07:00", "68.0");
+        healthWeight("2026-11-13 07:00", "69.0");
+
+        mvc.perform(get("/api/progress").with(asUser()))
+                .andExpect(jsonPath("$.weightPoints.length()").value(1))
+                .andExpect(jsonPath("$.weightPoints[0].date").value("2026-11-13"))
+                .andExpect(jsonPath("$.weightPoints[0].value").value(68.5))
+                .andExpect(jsonPath("$.weightTrend").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("REQ-003 the chart has one point per week for weight and body parts")
+    void req003OnePointPerWeekInTheChart() throws Exception {
+        checkin("{\"date\": \"2026-11-01\", \"measurements\": [{\"partId\": 1, \"valueCm\": 82}], \"weightKg\": 70}")
+                .andExpect(status().isOk());
+        checkin("{\"date\": \"2026-11-08\", \"measurements\": [{\"partId\": 1, \"valueCm\": 81}], \"weightKg\": 69}")
+                .andExpect(status().isOk());
+        healthWeight("2026-11-04 07:00", "69.6");
+        checkin("{\"date\": \"2026-11-15\", \"measurements\": [{\"partId\": 1, \"valueCm\": 80}], \"weightKg\": 68}")
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/progress").with(asUser()))
+                .andExpect(jsonPath("$.weightPoints.length()").value(3))
+                .andExpect(jsonPath("$.bodyParts[0].points.length()").value(3));
+    }
+
+    @Test
+    @DisplayName("REQ-004 weight and waist show the difference from the first to the latest week")
+    void req004DifferenceSinceFirstMeasurement() throws Exception {
+        checkin("{\"date\": \"2026-11-01\", \"measurements\": [{\"partId\": 1, \"valueCm\": 82.0}], \"weightKg\": 70.0}")
+                .andExpect(status().isOk());
+        checkin("{\"date\": \"2026-11-15\", \"measurements\": [{\"partId\": 1, \"valueCm\": 80.5}], \"weightKg\": 68.0}")
+                .andExpect(status().isOk());
+        healthWeight("2026-11-12 07:00", "69.0");
+
+        mvc.perform(get("/api/progress").with(asUser()))
+                .andExpect(jsonPath("$.weight.first").value(70.0))
+                .andExpect(jsonPath("$.weight.latest").value(68.5))
+                .andExpect(jsonPath("$.weight.latestDate").value("2026-11-15"))
+                .andExpect(jsonPath("$.weight.delta").value(-1.5))
+                .andExpect(jsonPath("$.bodyParts[0].name").value("Talia"))
+                .andExpect(jsonPath("$.bodyParts[0].metric.latest").value(80.5))
+                .andExpect(jsonPath("$.bodyParts[0].metric.delta").value(-1.5));
+    }
+
+    @Test
+    @DisplayName("REQ-004 without measurements there is no difference")
+    void req004NoDataWithoutMeasurements() throws Exception {
+        mvc.perform(get("/api/progress").with(asUser()))
+                .andExpect(jsonPath("$.weight").doesNotExist())
+                .andExpect(jsonPath("$.bodyParts[0].metric").doesNotExist());
     }
 }

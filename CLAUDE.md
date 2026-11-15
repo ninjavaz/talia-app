@@ -10,9 +10,10 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - Auth: single user, username/password -> session cookie. Separate static API token (stored as SHA-256 hash) only for the health-sync endpoint.
 
 ## MVP scope (build ONLY this)
-1. Measurements – weight (auto from Apple Health via sync + manual fallback), waist cm (manual, weekly), chart with raw points + 7-day moving average, delta since start (kg, cm).
+1. Measurements – weight (auto from Apple Health via sync + manual fallback), waist cm (manual, weekly), chart with one point per week (weekly average, no moving average - REQ-003), delta since start (kg, cm).
 2. Activity (from Apple Health via sync) – daily steps, workouts (type, duration, date), weekly workout goal with progress bar.
-3. Habits – configurable 3–4 daily habits, one-tap checkbox per day; streak counted in WEEKS (week counts if ≥ X% done).
+3. Habits – configurable daily habits (order, optional time, steps habit), one-tap checkbox per day; streak counted in
+   DAYS (a day counts when all habits active that day are checked; rule in `StreakRule`, REQ-015).
 4. Weekly AI summary – Sunday job: aggregate last 7 days -> LLM (provider behind interface, key in env) -> store short Polish summary (≤ ~5 sentences, supportive but honest).
 5. Web Push – weekly waist reminder; summary ready; alert if no health sync for 48h.
 
@@ -52,18 +53,27 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - **Manual-first (2026-11-13)**: once a week (Sunday) a *check-in* with waist, weight and the week's **average daily steps**
   (table `weekly_steps`, wins over synced daily steps). One check-in per week, saving again replaces it.
   In-app reminder card on Progress when due (Sunday, or >7 days since the last waist). Habits are a daily checklist on the
-  Week screen, workouts are added manually there. Health sync stays as an optional automatic source.
-- **Custom body measurements**: `body_part` and `body_measurement`. **No built-in waist (2026-11-14)**: a new account has
-  no body parts, the user adds what they want to measure in Settings (all renamable/deletable). The headline tile on
-  Progress shows the first body part of the list. The check-in sends `measurements: [{partId, valueCm}]` and
+  Week screen (the home screen since REQ-052), workouts are added manually there. Health sync stays as an optional automatic source.
+- **Custom body measurements**: `body_part` and `body_measurement`. A new account starts with one ordinary body part
+  "Talia"/"Waist" (by registration language, REQ-002, 2026-11-15); the user adds more in Settings (all
+  renamable/deletable). The headline tile on Progress shows the first body part of the list. The check-in sends `measurements: [{partId, valueCm}]` and
   *replaces* the week's manual data.
 - UX: every save shows a green `TlToast` (`<tl-toaster>` in the app root); checking a habit fires `diamondBurst()` 💎
   (bigger when all habits are done); clickable things have `cursor: pointer` and a subtle hover scale.
 - Pages read `httpResource` data through `safeValue()` (resource.value() throws in error state).
   Form fields bound with ngModel are signals (zoneless: plain fields set asynchronously don't re-render).
-- Goals, thresholds and habits are **configurable in the UI** (`app_settings` single row + `habit` table).
+- Goals and habits are **configurable in the UI** (`user_settings` row per user + `habit` table). New accounts get the
+  habits "Suplementy", "Picie wody" and the steps habit (`habit.kind = STEPS`, shown as "Kroki: <goal>", one per user).
+  A habit counts for the streak from `created_on` until `deactivated_on` (delete = deactivate).
 - **AI summary postponed to v2** and hidden from the UI for now. Provider will be Anthropic behind `LlmClient`. No `weekly_summary` table yet.
-- Push in MVP: weekly waist reminder + no-sync-for-48h alert ("summary ready" comes with v2).
+- **Push (2026-11-15, REQ-030/031/033/034)**: package `push`. Web Push implemented with JDK crypto only (`WebPushCrypto`
+  = RFC 8291, verified with the RFC test vector; `Vapid` = RFC 8292). VAPID keys from env `VAPID_PUBLIC_KEY` /
+  `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` (`scripts\vapid-keys.cmd`; without them a random pair per start, dev only).
+  SSRF guard: only `talia.push.allowed-host-suffixes` over HTTPS (`PushEndpoints`). `PushReminderService.sendDue()`
+  runs every minute (`PushScheduler`, off in tests via `talia.push.reminders-enabled=false`): habit at its time,
+  weekly check-in (default Sun 10:00), streak at risk (default 20:00); due = within the last 30 min, sent once via
+  `push_sent` claim. Tests use the shared `pushSender` mock from `IntegrationTest`. No 48h-sync alert; "summary ready"
+  (REQ-032) comes with the AI summary in v2.
 - **Light/dark theme** (system default + manual toggle, stored per device) and **i18n PL + EN** (PL default; language in `app_settings`, also used for push texts).
 - **Frontend**: Angular 22 (zoneless, standalone, signals), Tailwind 4 via postcss, **Spartan UI** like the cook-less project
   (brain from npm, helm generated into `frontend/projects/ui/helm`, alias `@ui/*`, style `nova`). **No Nx**, plain Angular CLI.
@@ -81,8 +91,10 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   day are checked; a habit added later does not break the earlier streak), rule kept in one place; steps are a special
   habit type (goal from settings) and the steps field of the check-in stays; workout duration stays required;
   home screen = today's habits + quick workout add (every daily entry <= 2 taps); Web Push in the PWA now, incl. an
-  evening push when the day is not complete yet (streak at risk); estimated burned kcal (MET x latest weight x duration)
-  shown on the workout list and as a weekly sum on the Week screen (burned, not food calories); WALK type still open;
+  evening push when the day is not complete yet (streak at risk); estimated burned kcal
+  (REQ-022: MET gym 5 / pilates 3 / walk 3.5 / other 4 x weight on that day x hours, computed on read in
+  `CalorieEstimate`; Health kcal > 0 wins) on the workout list and as a weekly sum (burned, not food calories); WALK stays a normal
+  workout type that counts towards the weekly goal (no extra setting);
   **AI summary (REQ-040/041) and "summary ready" push (REQ-032) stay in v2**.
 
 ## Non-goals
@@ -90,8 +102,21 @@ Calorie counting, recipes, multi-user, social features, native iOS app, photo an
 Later maybe: pill-break marking, food ideas, native iOS app.
 
 ## How to work
+- **Language (2026-11-15)**: everything written into the repo or GitHub is in **English**: documentation, README,
+  OpenSpec artifacts, code comments, commit messages, PR titles and descriptions. The UI stays PL + EN (i18n);
+  conversation with the user is in Polish.
 - Small steps: backend skeleton -> sync endpoint + tests -> measurements -> frontend shell + PWA -> charts -> habits -> AI summary -> push -> Docker Compose + Caddyfile.
 - Keep it simple: no microservices, no premature abstractions, one Spring module.
+- **Deployment (2026-11-15)**: Mikrus VPS (1 GB RAM) at `https://<server>.mikrus.cloud` (TLS by the Mikrus proxy,
+  Caddy serves plain `:80`; own domain later via `SITE_ADDRESS`). `deploy/` = `compose.prod.yml` (db, backend, web =
+  Caddy + Angular build, backup), `Caddyfile` (CSP, client IP only from `TRUSTED_PROXIES`), `backup.sh`,
+  `.env.example`. Images built by `.github/workflows/ci.yml` on `main` -> `ghcr.io/ninjavaz/talia-{backend,web}`
+  (`latest` + SHA). The user runs the server commands himself from `docs/deploy.md`. No inline scripts in
+  `index.html` (CSP `script-src 'self'`).
+- **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
+  its own branch from `develop` (e.g. `feature/measurements-weekly`), pushed and opened as a PR into `develop` with
+  `gh pr create --base develop`; the user decides when to merge (merging happens from here with `gh pr merge`).
+  `develop` -> `main` via PR when a set of groups is done. gh CLI: `C:\Program Files\GitHub CLI\gh.exe`.
 - **OpenSpec** (`openspec/`, rules in `openspec/config.yaml`, commands `/opsx:propose`, `/opsx:apply`, `/opsx:archive`):
   one change per requirement group with REQ-IDs; order migration -> backend + Testcontainers tests -> frontend ->
   Playwright e2e; tests first, REQ-ID in every test name, tasks up to ~200 lines of diff, full build after each task.

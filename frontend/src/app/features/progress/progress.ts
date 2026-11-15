@@ -86,7 +86,7 @@ type ChartMetric = string;
         <tl-stat
           [value]="i18n.num(p?.weight?.latest)"
           [unit]="p?.weight ? 'kg' : null"
-          [label]="'progress.weightTrend' | t"
+          [label]="'progress.weight' | t"
           [hint]="deltaText(p?.weight, 'kg')"
           [tone]="tone(p?.weight)"
         />
@@ -101,7 +101,7 @@ type ChartMetric = string;
       <tl-trend-chart
         class="mt-4"
         [points]="chartPoints()"
-        [trend]="chartTrend()"
+        [trend]="chartPoints()"
         [format]="formatAxis"
         [formatDate]="formatDate"
       >
@@ -187,12 +187,9 @@ export class ProgressPage {
     this.progressData()?.bodyParts.find((p) => `part-${p.id}` === this.chartMetric()),
   );
 
+  /** One point per week (REQ-003); the line connects the same points, there is no moving average. */
   protected readonly chartPoints = computed(() =>
     this.chartMetric() === 'weight' ? (this.progressData()?.weightPoints ?? []) : (this.chartPart()?.points ?? []),
-  );
-
-  protected readonly chartTrend = computed(() =>
-    this.chartMetric() === 'weight' ? (this.progressData()?.weightTrend ?? []) : (this.chartPart()?.points ?? []),
   );
 
   protected readonly stepsThisWeek = computed(() => {

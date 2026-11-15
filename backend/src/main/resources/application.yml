@@ -82,3 +82,17 @@ talia:
       hmac-secret: ${ALTCHA_HMAC_SECRET:}
     # session cookie only over HTTPS; false only for local http development
     cookie-secure: ${COOKIE_SECURE:true}
+  push:
+    # VAPID keys (scripts\vapid-keys.cmd prints a new pair). Without them every start uses a new random pair,
+    # which is fine locally: devices subscribe again on the next app start.
+    vapid-public-key: ${VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${VAPID_PRIVATE_KEY:}
+    vapid-subject: ${VAPID_SUBJECT:mailto:admin@localhost}
+    # the server only sends to these push services, over HTTPS (no requests to arbitrary URLs)
+    allowed-host-suffixes:
+      - fcm.googleapis.com
+      - push.services.mozilla.com
+      - push.apple.com
+      - notify.windows.com
+    allow-http: false
+    max-subscriptions-per-user: 10

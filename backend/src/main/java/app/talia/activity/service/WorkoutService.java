@@ -6,9 +6,12 @@ import app.talia.activity.model.WorkoutCategory;
 import app.talia.activity.repository.WorkoutRepository;
 import app.talia.common.BadRequestException;
 import app.talia.common.NotFoundException;
+import app.talia.measurement.service.WeightService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -24,10 +27,12 @@ public class WorkoutService {
     private static final LocalTime DEFAULT_PAST_TIME = LocalTime.of(12, 0);
 
     private final WorkoutRepository workouts;
+    private final WeightService weights;
     private final Clock clock;
 
-    WorkoutService(WorkoutRepository workouts, Clock clock) {
+    WorkoutService(WorkoutRepository workouts, WeightService weights, Clock clock) {
         this.workouts = workouts;
+        this.weights = weights;
         this.clock = clock;
     }
 
@@ -36,7 +41,7 @@ public class WorkoutService {
         return workouts.findByUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAt(
                         userId, from.atStartOfDay(), to.plusDays(1).atStartOfDay())
                 .stream()
-                .map(WorkoutService::toModel)
+                .map(this::toModel)
                 .toList();
     }
 
@@ -69,9 +74,16 @@ public class WorkoutService {
         }
     }
 
-    private static Workout toModel(WorkoutEntity e) {
-        return new Workout(e.getId(), e.getStartedAt(),
-                (int) Duration.between(e.getStartedAt(), e.getEndedAt()).toMinutes(), e.getType(), e.getCategory(),
-                e.getKcal());
+    /** REQ-022: kcal from Apple Health when present (> 0), otherwise estimated from the weight of that day. */
+    private Workout toModel(WorkoutEntity e) {
+        int durationMin = (int) Duration.between(e.getStartedAt(), e.getEndedAt()).toMinutes();
+        BigDecimal synced = e.getKcal();
+        boolean hasSynced = synced != null && synced.signum() > 0;
+        Integer kcal = hasSynced
+                ? Integer.valueOf(synced.setScale(0, RoundingMode.HALF_UP).intValue())
+                : CalorieEstimate.kcal(e.getCategory(), durationMin,
+                        weights.weightOn(e.getUserId(), e.getStartedAt().toLocalDate()).orElse(null));
+        return new Workout(e.getId(), e.getStartedAt(), durationMin, e.getType(), e.getCategory(), kcal,
+                !hasSynced && kcal != null);
     }
 }

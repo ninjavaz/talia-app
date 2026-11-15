@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 /** Everything for the "Week" screen: workouts against the goal, average steps and habit stats. */
 @Service
@@ -41,7 +42,9 @@ public class WeekService {
         AppSettings s = settings.get(userId);
         // habit stats up to today for the current week, the whole week for past weeks
         LocalDate statsDay = end.isAfter(today) ? today : end;
-        return new WeekView(start, end, s.weeklyWorkoutGoal(), list.size(), list,
+        Integer kcalTotal = list.stream().map(Workout::kcal).filter(Objects::nonNull)
+                .reduce(Integer::sum).orElse(null);
+        return new WeekView(start, end, s.weeklyWorkoutGoal(), list.size(), list, kcalTotal,
                 steps.avgDailySteps(userId, anyDay).orElse(null), s.dailyStepsGoal(),
                 habits.stats(userId, statsDay));
     }

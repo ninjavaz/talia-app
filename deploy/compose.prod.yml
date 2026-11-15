@@ -1,0 +1,89 @@
+# Production stack for a small server (1 GB RAM). Images are built by GitHub Actions (ghcr.io).
+# Usage on the server, in this directory:  docker compose -f compose.prod.yml up -d
+# All settings and secrets come from .env (see .env.example); never commit .env.
+name: talia
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: talia
+      POSTGRES_USER: talia
+      # required: the database does not start without it
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # tuned down for a 1 GB server
+    command: >
+      postgres -c shared_buffers=48MB -c effective_cache_size=128MB -c work_mem=2MB
+      -c maintenance_work_mem=16MB -c max_connections=20
+    volumes:
+      - talia-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talia -d talia"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 200m
+
+  backend:
+    image: ghcr.io/ninjavaz/talia-backend:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/talia
+      DB_USER: talia
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE: "5"
+      PUBLIC_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env}
+      MAIL_HOST: ${MAIL_HOST:-localhost}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-Talia <no-reply@localhost>}
+      ALTCHA_HMAC_SECRET: ${ALTCHA_HMAC_SECRET:?set ALTCHA_HMAC_SECRET in .env}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@localhost}
+    mem_limit: 420m
+
+  web:
+    image: ghcr.io/ninjavaz/talia-web:${TAG:-latest}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-private_ranges}
+    ports:
+      - "${WEB_PORT:-80}:80"
+      # own domain later: also publish 443 ("443:443") and set SITE_ADDRESS to the domain
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 64m
+
+  # daily database dump into ./backups, kept for 14 days
+  backup:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: talia
+      PGPASSWORD: ${DB_PASSWORD}
+      PGDATABASE: talia
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    mem_limit: 64m
+
+volumes:
+  talia-db:
+  caddy-data:
+  caddy-config:

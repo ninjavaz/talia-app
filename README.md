@@ -1,71 +1,95 @@
 # Talia
 
-Prosta apka (PWA) do śledzenia talii, trendu wagi, aktywności i nawyków. Bez liczenia kalorii.
+A simple PWA for tracking body measurements, weight trend, activity and habits. No calorie counting.
 
 - `backend/`: Spring Boot 4.1, Java 25, PostgreSQL, Flyway
-- `frontend/`: Angular 22, Tailwind 4, Spartan UI (helm w `src/app/ui`), PWA
-- `scripts/`: skrypty do lokalnego uruchamiania (Windows)
+- `frontend/`: Angular 22, Tailwind 4, Spartan UI (helm in `projects/ui/helm`), PWA
+- `scripts/`: scripts for running locally (Windows)
+- `openspec/`: requirements as OpenSpec changes and specs
+- `deploy/`: production Docker Compose stack, see [docs/deploy.md](docs/deploy.md)
 
-Szczegóły i decyzje projektowe: [CLAUDE.md](CLAUDE.md).
+Details and design decisions: [CLAUDE.md](CLAUDE.md).
 
-## Uruchomienie lokalne
+## Running locally
 
-Wymagania: JDK 25, Node 24+, Docker Desktop (uruchomiony).
+Requirements: JDK 25, Node 24+, Docker Desktop (running).
 
 ```bat
 scripts\dev.cmd
 ```
 
-Skrypt otwiera dwa okna:
+The script opens two windows:
 
-| | Adres | Skrypt |
+| | Address | Script |
 |---|---|---|
-| Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (najpierw sam startuje bazę), albo `cd backend` + `.\mvnw.cmd` |
-| Frontend | http://localhost:4200 | `scripts\dev-frontend.cmd` (`npm start`, `/api` przez proxy do :8080) |
+| Backend | http://localhost:8080 | `scripts\dev-backend.cmd` (starts the database first), or `cd backend` + `.\mvnw.cmd` |
+| Frontend | http://localhost:4200 | `scripts\dev-frontend.cmd` (`npm start`, `/api` proxied to :8080) |
 
-Konto zakładasz w aplikacji (zakładka „Załóż konto”). Mail z linkiem potwierdzającym (i z resetem hasła) lokalnie nigdzie nie wychodzi: łapie go **Mailpit** na http://localhost:8025. Osobisty token do synchronizacji z Apple Health generujesz w Ustawieniach.
+Create an account in the app ("Create account" tab). Locally, e-mails with the confirmation link (and password reset) never
+leave your computer: **Mailpit** catches them at http://localhost:8025. The personal Apple Health sync token is
+generated in Settings.
 
-`.\mvnw.cmd` bez argumentów uruchamia backend z profilem `dev`. Ustawienia lokalne są w [backend/config/application-dev.yml](backend/config/application-dev.yml), który nie trafia do jara. Baza musi wtedy działać (`scripts\db-start.cmd`).
+`.\mvnw.cmd` without arguments starts the backend with the `dev` profile. Local settings live in
+[backend/config/application-dev.yml](backend/config/application-dev.yml), which is not packaged into the jar. The
+database must be running then (`scripts\db-start.cmd`).
 
-Po zmianach w `tsconfig.json` (np. nowe komponenty Spartana) zrestartuj `npm start`, bo serwer w trybie watch nie wczytuje aliasów ścieżek ponownie.
+After changes to `tsconfig.json` (e.g. new Spartan components) restart `npm start`; the watch server does not reload
+path aliases.
 
-### Wysyłka maili (produkcja)
+### Sending e-mails (production)
 
-Backend wysyła maile przez zwykłe SMTP, więc dostawcę zmienia się samą konfiguracją (zmienne środowiskowe):
+The backend sends e-mails over plain SMTP, so the provider is switched by configuration only (environment variables):
 
-| Zmienna | Przykład |
+| Variable | Example |
 |---|---|
 | `MAIL_HOST`, `MAIL_PORT` | `smtp-relay.brevo.com`, `587` |
-| `MAIL_USERNAME`, `MAIL_PASSWORD` | login / klucz SMTP od dostawcy |
-| `MAIL_FROM` | `Talia <no-reply@twoja-domena.pl>` |
-| `PUBLIC_URL` | `https://talia.twoja-domena.pl` (linki w mailach) |
-| `ALTCHA_HMAC_SECRET` | długi losowy ciąg (opcjonalnie; bez niego losowy przy każdym starcie) |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | SMTP login / key from the provider |
+| `MAIL_FROM` | `Talia <no-reply@your-domain.com>` |
+| `PUBLIC_URL` | `https://talia.your-domain.com` (links in e-mails) |
+| `ALTCHA_HMAC_SECRET` | a long random string (optional; without it a random one is generated on every start) |
 
-Domena nadawcy musi mieć ustawione SPF i DKIM (dostawca podaje rekordy DNS), inaczej maile trafią do spamu.
+The sender domain needs SPF and DKIM (the provider gives the DNS records), otherwise e-mails end up in spam.
 
-### Baza danych
+### Push notifications (production)
 
-Lokalny Postgres 18 działa w Dockerze ([compose.dev.yml](compose.dev.yml)) na **localhost:5433**, baza `talia`, user `talia` / `talia` (np. do DBeavera). Dane są w wolumenie Dockera, więc przetrwają restart.
+Reminders are sent with Web Push. The server needs a fixed VAPID key pair, otherwise every restart uses a new random
+pair and devices have to subscribe again:
 
-| Skrypt | Co robi |
+| Variable | Example |
 |---|---|
-| `scripts\db-start.cmd` | startuje bazę i Mailpit, czeka, aż będą gotowe |
-| `scripts\db-reset.cmd` | usuwa bazę razem z danymi (pyta o potwierdzenie) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | printed by `scriptsapid-keys.cmd` (keep the private key secret) |
+| `VAPID_SUBJECT` | `mailto:admin@your-domain.com` (contact for the push services) |
 
-Schemat tworzy Flyway przy starcie backendu. Pełny reset: `db-reset`, potem `dev-backend`.
+Push only works over HTTPS in a production build (the service worker is off in `ng serve`); on iPhone only in the
+app added to the home screen (iOS 16.4+). The server sends only to the known push services (Google, Mozilla, Apple,
+Microsoft), see `talia.push.allowed-host-suffixes`.
 
-Alternatywa bez lokalnej bazy: [TestTaliaApplication](backend/src/test/java/app/talia/TestTaliaApplication.java) (uruchamiana z IDE) stawia tymczasowego Postgresa przez Testcontainers.
+### Database
 
-Test synchronizacji:
+The local Postgres 18 runs in Docker ([compose.dev.yml](compose.dev.yml)) on **localhost:5433**, database `talia`,
+user `talia` / `talia` (e.g. for DBeaver). Data lives in a Docker volume, so it survives restarts.
+
+| Script | What it does |
+|---|---|
+| `scripts\db-start.cmd` | starts the database and Mailpit, waits until they are ready |
+| `scripts\db-reset.cmd` | deletes the database including its data (asks for confirmation) |
+
+Flyway creates the schema when the backend starts. Full reset: `db-reset`, then `dev-backend`.
+
+Alternative without a local database: [TestTaliaApplication](backend/src/test/java/app/talia/TestTaliaApplication.java)
+(run from the IDE) starts a temporary Postgres through Testcontainers.
+
+Sync test:
 
 ```bash
-curl -H "Authorization: Bearer <token z Ustawień>" -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer <token from Settings>" -H "Content-Type: application/json" \
   -d '{"steps":[{"date":"2026-11-13","value":5321}]}' http://localhost:8080/api/health-sync
 ```
 
-## Testy
+## Tests
 
 ```bat
-cd backend && .\mvnw.cmd verify      :: testy integracyjne (wymaga Dockera)
+cd backend && .\mvnw.cmd verify      :: integration tests (needs Docker)
 cd frontend && npm test -- --watch=false
+cd frontend && npm run e2e           :: Playwright e2e (needs Docker; own backend on :8081, frontend on :4300)
 ```

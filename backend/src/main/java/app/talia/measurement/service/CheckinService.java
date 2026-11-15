@@ -151,10 +151,9 @@ public class CheckinService {
             parts.add(new BodyPartProgress(part.id(), part.name(), metric(points, 1), points));
         }
 
-        List<Point> weightPoints = weights.findDailyAverages(userId).stream()
+        List<Point> weightPoints = weights.findWeeklyPoints(userId).stream()
                 .map(v -> new Point(v.getDate(), v.getValue()))
                 .toList();
-        List<Point> weightTrend = movingAverage(weightPoints, 7);
 
         LocalDate lastCheckin = Stream.of(
                         measurements.findLastDate(userId),
@@ -177,32 +176,15 @@ public class CheckinService {
         }
 
         return new ProgressView(
-                metric(weightTrend, 1),
+                metric(weightPoints, 1),
                 parts,
                 weightPoints,
-                weightTrend,
                 steps.avgDailySteps(userId, today).orElse(null),
                 steps.avgDailySteps(userId, today.minusWeeks(1)).orElse(null),
                 settings.get(userId).dailyStepsGoal(),
                 lastCheckin,
                 doneThisWeek,
                 due);
-    }
-
-    /** Trailing average over the values whose date lies within the last {@code days} days of each point. */
-    public static List<Point> movingAverage(List<Point> points, int days) {
-        List<Point> result = new ArrayList<>(points.size());
-        for (int i = 0; i < points.size(); i++) {
-            LocalDate date = points.get(i).date();
-            BigDecimal sum = BigDecimal.ZERO;
-            int count = 0;
-            for (int j = i; j >= 0 && points.get(j).date().isAfter(date.minusDays(days)); j--) {
-                sum = sum.add(points.get(j).value());
-                count++;
-            }
-            result.add(new Point(date, sum.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP)));
-        }
-        return result;
     }
 
     private static Metric metric(List<Point> points, int scale) {

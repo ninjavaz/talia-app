@@ -1,0 +1,10 @@
+# Context of the web image (docker build -f frontend/Dockerfile .): only frontend sources and deploy/Caddyfile matter
+.git
+backend
+frontend/node_modules
+frontend/dist
+frontend/.angular
+frontend/test-results
+frontend/playwright-report
+deploy/.env
+deploy/backups

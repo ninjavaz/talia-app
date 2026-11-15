@@ -25,7 +25,8 @@ export const routes: Routes = [
     component: Shell,
     canActivate: [authGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'progress' },
+      // REQ-052: the app opens on the Week screen (today's habits first)
+      { path: '', pathMatch: 'full', redirectTo: 'week' },
       {
         path: 'progress',
         loadComponent: () => import('./features/progress/progress').then((m) => m.ProgressPage),
