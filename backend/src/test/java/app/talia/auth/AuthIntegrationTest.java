@@ -179,12 +179,14 @@ class AuthIntegrationTest extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("ola@example.org"))
                 .andReturn().getRequest().getSession(false);
-        // a fresh account has default settings, the language from registration, the waist body part (REQ-002)
-        // and no data
+        // a fresh account has default settings, the language from registration, the waist body part (REQ-002),
+        // the default habits (REQ-010) and no data
         mvc.perform(get("/api/body-parts").session(session))
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].name").value("Waist"));
-        mvc.perform(get("/api/habits").session(session)).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/habits").session(session))
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].name").value("Supplements"));
         mvc.perform(get("/api/settings").session(session))
                 .andExpect(jsonPath("$.weeklyWorkoutGoal").value(3))
                 .andExpect(jsonPath("$.language").value("en"));

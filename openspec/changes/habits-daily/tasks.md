@@ -6,8 +6,8 @@
 
 ## 2. Backend tests from the requirements (written first)
 
-- [ ] 2.1 `StreakRule` unit tests "REQ-015 ..." (consecutive days, incomplete today does not break, today completes, missed day breaks, new habit does not change past days, day without habits does not count); verify they fail (rule not implemented yet)
-- [ ] 2.2 Integration tests in `HabitIntegrationTest` "REQ-010 ..." (defaults PL/EN, add/edit/delete, reorder, invalid reorder), "REQ-011 ..." (time set, cleared, invalid), "REQ-012 ..." (check/uncheck idempotent, future day), "REQ-013 ..." (one steps habit, not renamable, checkable), "REQ-014 ..." (doneToday/total), "REQ-015 ..." (streak over the API incl. habit added today and deleted habit); switch the `IntegrationTest` fixture to the default habits and replace the old weekly streak test; extend `DataIsolationIntegrationTest` (reorder/update with foreign ids); verify the new tests fail for the right reason
+- [x] 2.1 `StreakRule` unit tests "REQ-015 ..." (consecutive days, incomplete today does not break, today completes, missed day breaks, new habit does not change past days, day without habits does not count); verify they fail (rule not implemented yet)
+- [x] 2.2 Integration tests in `HabitIntegrationTest` "REQ-010 ..." (defaults PL/EN, add/edit/delete, reorder, invalid reorder), "REQ-011 ..." (time set, cleared, invalid), "REQ-012 ..." (check/uncheck idempotent, future day), "REQ-013 ..." (one steps habit, not renamable, checkable), "REQ-014 ..." (doneToday/total), "REQ-015 ..." (streak over the API incl. habit added today and deleted habit); switch the `IntegrationTest` fixture to the default habits and replace the old weekly streak test; extend `DataIsolationIntegrationTest` (reorder/update with foreign ids); verify the new tests fail for the right reason
 
 ## 3. Backend implementation
 
