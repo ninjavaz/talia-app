@@ -14,7 +14,8 @@ import org.springframework.web.servlet.function.ServerResponse;
 
 /**
  * Test-only endpoints for the Playwright e2e tests. {@code POST /api/e2e/reset} wipes all data and creates the
- * account {@value #USERNAME} (confirmed e-mail, password {@value #PASSWORD}), so every e2e test starts clean.
+ * account {@value #USERNAME} (confirmed e-mail, password {@value #PASSWORD}, default body part and habits, the
+ * habits active since 30 days ago), so every e2e test starts clean.
  * Registered only by {@link E2eTaliaApplication} and only with the "e2e" profile.
  */
 @TestConfiguration(proxyBeanMethods = false)
@@ -47,6 +48,8 @@ public class E2eSupport {
                     jdbc.sql("TRUNCATE app_user, spring_session, rate_limit_bucket, altcha_used RESTART IDENTITY CASCADE")
                             .update();
                     accounts.create(USERNAME, PASSWORD);
+                    // the default habits exist for a while, so tests can check past days (streak)
+                    jdbc.sql("UPDATE habit SET created_on = current_date - 30").update();
                     return ServerResponse.noContent().build();
                 })
                 .build();

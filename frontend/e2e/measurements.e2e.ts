@@ -47,6 +47,7 @@ function tile(page: Page, label: string) {
 }
 
 test('REQ-001 weekly check-in saves the weight with its date', async ({ loggedIn: page }) => {
+  await page.goto('/progress');
   await page.getByRole('button', { name: 'Dodaj pomiar' }).click();
   await expect(page.locator('input[name="date"]')).toHaveValue(daysAgo(0));
   await page.locator('input[name="weight"]').fill('68,4');
@@ -58,6 +59,7 @@ test('REQ-001 weekly check-in saves the weight with its date', async ({ loggedIn
 });
 
 test('REQ-002 a new account measures the waist and it can be deleted', async ({ loggedIn: page }) => {
+  await page.goto('/progress');
   await expect(tile(page, 'Talia')).toBeVisible();
 
   await page.goto('/settings');
@@ -72,6 +74,7 @@ test('REQ-002 a new account measures the waist and it can be deleted', async ({ 
 });
 
 test('REQ-003 the chart shows one point per week', async ({ loggedIn: page }) => {
+  await page.goto('/progress');
   // two weights on different days of the same week (two weeks ago) count as one point
   const week = monday(daysAgo(14));
   await healthWeight(page.request, `${week}T07:00:00`, 70.4);
@@ -85,6 +88,7 @@ test('REQ-003 the chart shows one point per week', async ({ loggedIn: page }) =>
 });
 
 test('REQ-004 progress shows the difference since the first measurement', async ({ loggedIn: page }) => {
+  await page.goto('/progress');
   await expect(tile(page, 'Waga')).toContainText('brak danych');
 
   await checkin(page.request, daysAgo(14), 70, 82);

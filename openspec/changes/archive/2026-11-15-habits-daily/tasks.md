@@ -21,8 +21,8 @@
 
 ## 5. E2e (Playwright)
 
-- [ ] 5.1 `frontend/e2e/habits.e2e.ts`: "REQ-010 default habits and reorder by dragging", "REQ-011 habit with a time", "REQ-012 check and uncheck with one tap", "REQ-013 steps habit shows the goal", "REQ-014 daily progress", "REQ-015 streak in days" (past checks seeded via API), and `home.e2e.ts` "REQ-052 app opens on the Week screen / habit in one tap / workout in two taps"; update the smoke test for the new start page; verify `npm run e2e` passes
+- [x] 5.1 `frontend/e2e/habits.e2e.ts`: "REQ-010 default habits and reorder by dragging", "REQ-011 habit with a time", "REQ-012 check and uncheck with one tap", "REQ-013 steps habit shows the goal", "REQ-014 daily progress", "REQ-015 streak in days" (past checks seeded via API), and `home.e2e.ts` "REQ-052 app opens on the Week screen / habit in one tap / workout in two taps"; update the smoke test for the new start page; verify `npm run e2e` passes
 
 ## 6. Wrap-up
 
-- [ ] 6.1 Update CLAUDE.md (streak in days, default habits, home screen), list assumptions in design.md, full build (backend tests, `ng build`, `ng test`, `npm run e2e`), archive the change in the same PR
+- [x] 6.1 Update CLAUDE.md (streak in days, default habits, home screen), list assumptions in design.md, full build (backend tests, `ng build`, `ng test`, `npm run e2e`), archive the change in the same PR

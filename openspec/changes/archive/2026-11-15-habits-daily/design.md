@@ -62,3 +62,20 @@
 ## Migration Plan
 
 V4 runs on startup; rollback = restore the database backup (no production deployment yet).
+
+## Assumptions made during implementation
+
+- `HabitStats.weekPct` was removed as well (it only served the weekly threshold); the Week panel shows the day streak
+  in its place.
+- The steps habit is stored with the name `"steps"`; a request must not send a name for it (create and update),
+  otherwise 400. A second active steps habit is 409.
+- The `remindAt` time is exchanged as `"HH:mm"`; anything else (e.g. `"25:00"`) is 400.
+- Checking a past day for a habit that did not exist yet is accepted by the API but has no effect on the streak.
+- Habits deleted before migration V4 are treated as never active (`deactivated_on = created_on`).
+- The test fixture now uses the default habits of the account (ids 1-3), backdated to 1 Oct 2026; tests that relied on
+  the old fixture habit names were adapted, the weekly streak test was replaced by REQ-015 tests.
+- The e2e reset backdates the e2e account's habits by 30 days so past days can be checked for the streak test.
+- The measurement e2e tests now open `/progress` first, because the app starts on the Week screen (REQ-052).
+- Found while writing the e2e test: the CDK drop animation crashed on the Tailwind `transition` utility of list rows
+  (several properties, one duration), so dropping never reordered. Fixed with global `.cdk-drag-*` styles in
+  `styles.css`.
