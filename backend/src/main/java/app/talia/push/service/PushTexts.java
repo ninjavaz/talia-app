@@ -7,7 +7,7 @@ final class PushTexts {
 
     private static final Map<String, Map<String, String>> TEXTS = Map.of(
             "pl", Map.of(
-                    "title", "Talia",
+                    "title", "MyTalia",
                     "test", "Powiadomienia działają na tym urządzeniu.",
                     "habit", "Pora na: %s",
                     "steps", "Kroki: %s",
@@ -17,7 +17,7 @@ final class PushTexts {
                     "today.title", "Nawyki na dziś",
                     "streak.body", "Do odhaczenia: %d z %d."),
             "en", Map.of(
-                    "title", "Talia",
+                    "title", "MyTalia",
                     "test", "Notifications work on this device.",
                     "habit", "Time for: %s",
                     "steps", "Steps: %s",

@@ -24,28 +24,28 @@ public class AccountMailService {
         String link = publicUrl + "/verify#t=" + token;
         long hours = security.verifyLinkTtl().toHours();
         if ("en".equals(language)) {
-            mailer.send(to, "Confirm your e-mail - Talia", """
+            mailer.send(to, "Confirm your e-mail - MyTalia", """
                     Hi %s,
 
-                    welcome to Talia! Please confirm your e-mail address to activate your account:
+                    welcome to MyTalia! Please confirm your e-mail address to activate your account:
 
                     %s
 
                     The link is valid for %d hours. If you did not create an account, just ignore this message.
 
-                    Talia
+                    MyTalia
                     """.formatted(username, link, hours));
         } else {
-            mailer.send(to, "Potwierdź e-mail - Talia", """
+            mailer.send(to, "Potwierdź e-mail - MyTalia", """
                     Cześć %s,
 
-                    witaj w Talii! Potwierdź swój adres e-mail, żeby aktywować konto:
+                    witaj w MyTalii! Potwierdź swój adres e-mail, żeby aktywować konto:
 
                     %s
 
                     Link jest ważny %d godz. Jeśli to nie Ty zakładasz konto, po prostu zignoruj tę wiadomość.
 
-                    Talia
+                    MyTalia
                     """.formatted(username, link, hours));
         }
     }
@@ -54,7 +54,7 @@ public class AccountMailService {
         String link = publicUrl + "/reset#t=" + token;
         long minutes = security.resetLinkTtl().toMinutes();
         if ("en".equals(language)) {
-            mailer.send(to, "Set a new password - Talia", """
+            mailer.send(to, "Set a new password - MyTalia", """
                     Hi %s,
 
                     to set a new password for your account "%s", open:
@@ -64,10 +64,10 @@ public class AccountMailService {
                     The link is valid for %d minutes and works once. If you did not ask for it, ignore this message:
                     your password stays the same.
 
-                    Talia
+                    MyTalia
                     """.formatted(username, username, link, minutes));
         } else {
-            mailer.send(to, "Ustaw nowe hasło - Talia", """
+            mailer.send(to, "Ustaw nowe hasło - MyTalia", """
                     Cześć %s,
 
                     żeby ustawić nowe hasło do konta „%s”, otwórz:
@@ -77,7 +77,7 @@ public class AccountMailService {
                     Link jest ważny %d min i działa jeden raz. Jeśli to nie Ty prosisz o zmianę, zignoruj tę
                     wiadomość: hasło się nie zmieni.
 
-                    Talia
+                    MyTalia
                     """.formatted(username, username, link, minutes));
         }
     }
@@ -86,28 +86,28 @@ public class AccountMailService {
     public void alreadyRegistered(String to, String username, String language) {
         String link = publicUrl + "/login";
         if ("en".equals(language)) {
-            mailer.send(to, "You already have an account - Talia", """
+            mailer.send(to, "You already have an account - MyTalia", """
                     Hi,
 
-                    someone (hopefully you) tried to create a Talia account with this e-mail address,
+                    someone (hopefully you) tried to create a MyTalia account with this e-mail address,
                     but it already belongs to the account "%s". Log in at %s
                     or use "Forgot password?" there.
 
                     If it was not you, ignore this message.
 
-                    Talia
+                    MyTalia
                     """.formatted(username, link));
         } else {
-            mailer.send(to, "Masz już konto - Talia", """
+            mailer.send(to, "Masz już konto - MyTalia", """
                     Cześć,
 
-                    ktoś (mamy nadzieję, że Ty) próbował założyć konto w Talii na ten adres e-mail,
+                    ktoś (mamy nadzieję, że Ty) próbował założyć konto w MyTalii na ten adres e-mail,
                     ale należy on już do konta „%s”. Zaloguj się na %s
                     albo użyj tam opcji „Nie pamiętasz hasła?”.
 
                     Jeśli to nie Ty, zignoruj tę wiadomość.
 
-                    Talia
+                    MyTalia
                     """.formatted(username, link));
         }
     }

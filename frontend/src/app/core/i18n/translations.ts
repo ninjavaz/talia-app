@@ -4,7 +4,7 @@ export const LANGS: readonly Lang[] = ['pl', 'en'];
 
 /** Polish is the source of truth: every key must exist here, English is type-checked against it. */
 const pl = {
-  'app.name': 'Talia',
+  'app.name': 'MyTalia',
 
   'nav.progress': 'Postęp',
   'nav.week': 'Tydzień',
@@ -182,7 +182,7 @@ const pl = {
   'settings.language': 'Język',
   'settings.account': 'Konto',
   'settings.sync': 'Apple Health',
-  'settings.syncHint': 'Osobisty token dla Skrótu iOS, który wysyła dane z Apple Health do Talii.',
+  'settings.syncHint': 'Osobisty token dla Skrótu iOS, który wysyła dane z Apple Health do MyTalii.',
   'settings.syncConfigured': 'Token jest ustawiony',
   'settings.syncNone': 'Brak tokenu',
   'settings.syncGenerate': 'Wygeneruj nowy token',
@@ -198,7 +198,7 @@ const pl = {
 export type TranslationKey = keyof typeof pl;
 
 const en: Record<TranslationKey, string> = {
-  'app.name': 'Talia',
+  'app.name': 'MyTalia',
 
   'nav.progress': 'Progress',
   'nav.week': 'Week',
@@ -376,7 +376,7 @@ const en: Record<TranslationKey, string> = {
   'settings.language': 'Language',
   'settings.account': 'Account',
   'settings.sync': 'Apple Health',
-  'settings.syncHint': 'Personal token for the iOS Shortcut that sends Apple Health data to Talia.',
+  'settings.syncHint': 'Personal token for the iOS Shortcut that sends Apple Health data to MyTalia.',
   'settings.syncConfigured': 'A token is set',
   'settings.syncNone': 'No token yet',
   'settings.syncGenerate': 'Generate a new token',

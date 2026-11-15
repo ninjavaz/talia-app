@@ -56,7 +56,7 @@ talia:
   # address of the app (links in e-mails)
   public-url: ${PUBLIC_URL:http://localhost:4200}
   mail:
-    from: ${MAIL_FROM:Talia <no-reply@localhost>}
+    from: ${MAIL_FROM:MyTalia <no-reply@localhost>}
   security:
     # failed logins: per IP and per username, refilled gradually over the window; over the limit -> 429
     login-max-failures-per-ip: 20
