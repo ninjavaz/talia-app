@@ -91,6 +91,9 @@ Calorie counting, recipes, multi-user, social features, native iOS app, photo an
 Later maybe: pill-break marking, food ideas, native iOS app.
 
 ## How to work
+- **Language (2026-11-15)**: everything written into the repo or GitHub is in **English**: documentation, README,
+  OpenSpec artifacts, code comments, commit messages, PR titles and descriptions. The UI stays PL + EN (i18n);
+  conversation with the user is in Polish.
 - Small steps: backend skeleton -> sync endpoint + tests -> measurements -> frontend shell + PWA -> charts -> habits -> AI summary -> push -> Docker Compose + Caddyfile.
 - Keep it simple: no microservices, no premature abstractions, one Spring module.
 - **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
