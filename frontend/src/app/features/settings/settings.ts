@@ -1,5 +1,12 @@
 import { httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  CdkDrag,
+  CdkDragDrop,
+  CdkDragHandle,
+  CdkDropList,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
+import { Component, computed, effect, inject, linkedSignal, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
@@ -18,16 +25,22 @@ import {
   TlLogo,
   TlToast,
 } from '@talia/ui';
-import { Api, BodyPart, Habit, Settings, safeValue } from '../../core/api';
+import { Api, BodyPart, Habit, HabitKind, Settings, safeValue } from '../../core/api';
+import { habitLabel, habitTime } from '../../core/habits';
 import { Auth } from '../../core/auth/auth';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import { Lang, TranslationKey } from '../../core/i18n/translations';
 import { Theme } from '../../core/theme/theme';
+import { HabitSheet } from './habit-sheet';
 
 @Component({
   selector: 'app-settings',
   imports: [
+    CdkDrag,
+    CdkDragHandle,
+    CdkDropList,
     FormsModule,
+    HabitSheet,
     NgIcon,
     TlButton,
     TlCard,
@@ -65,27 +78,60 @@ import { Theme } from '../../core/theme/theme';
       </form>
     </tl-card>
 
-    <tl-section-header [title]="'settings.habits' | t" />
-    <tl-list>
-      @for (h of habitsData() ?? []; track h.id) {
-        <tl-list-item icon="lucideListChecks" [title]="h.name">
-          <span tlListTrailing class="flex gap-1">
-            <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'settings.renamePrompt' | t" (click)="rename(h)">
+    <tl-section-header [title]="'settings.habits' | t">
+      <button
+        tlRoundButton
+        size="sm"
+        [attr.aria-label]="'settings.addHabit' | t"
+        (click)="openHabit(null, 'NORMAL')"
+      >
+        <ng-icon name="lucidePlus" />
+      </button>
+    </tl-section-header>
+    <!-- REQ-010: drag by the handle to change the order (same order on the Week screen) -->
+    <tl-list cdkDropList cdkDropListLockAxis="y" (cdkDropListDropped)="dropHabit($event)">
+      @for (h of habitOrder(); track h.id) {
+        <tl-list-item
+          cdkDrag
+          [icon]="h.kind === 'STEPS' ? 'lucideFootprints' : 'lucideListChecks'"
+          [title]="habitName(h)"
+          [subtitle]="time(h.remindAt)"
+        >
+          <span tlListTrailing class="flex items-center gap-1">
+            <button
+              tlRoundButton
+              size="sm"
+              variant="ghost"
+              [attr.aria-label]="'habit.editTitle' | t"
+              (click)="openHabit(h, h.kind)"
+            >
               <ng-icon name="lucidePencil" class="text-muted-foreground" />
             </button>
-            <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'common.delete' | t" (click)="removeHabit(h)">
+            <button
+              tlRoundButton
+              size="sm"
+              variant="ghost"
+              [attr.aria-label]="'common.delete' | t"
+              (click)="removeHabit(h)"
+            >
               <ng-icon name="lucideTrash2" class="text-muted-foreground" />
             </button>
+            <span
+              cdkDragHandle
+              class="text-muted-foreground flex size-9 cursor-grab touch-none items-center justify-center"
+              [attr.aria-label]="'settings.dragHabit' | t"
+            >
+              <ng-icon name="lucideGripVertical" />
+            </span>
           </span>
         </tl-list-item>
       }
-      <form class="flex items-center gap-2 py-3" (ngSubmit)="addHabit()">
-        <input tlInput name="newHabit" maxlength="100" [placeholder]="'settings.newHabit' | t" [(ngModel)]="newHabit" />
-        <button tlRoundButton variant="solid" type="submit" [attr.aria-label]="'common.add' | t" [disabled]="!newHabit.trim()">
-          <ng-icon name="lucidePlus" />
-        </button>
-      </form>
     </tl-list>
+    @if (habitsData() && !hasStepsHabit()) {
+      <button tlButton variant="secondary" class="mt-3 w-full" (click)="openHabit(null, 'STEPS')">
+        {{ 'settings.addStepsHabit' | t }}
+      </button>
+    }
     <p class="text-muted-foreground mt-2 px-2 text-xs">{{ 'settings.habitsHint' | t }}</p>
 
     <tl-section-header [title]="'settings.bodyParts' | t" />
@@ -93,18 +139,42 @@ import { Theme } from '../../core/theme/theme';
       @for (b of bodyPartsData() ?? []; track b.id) {
         <tl-list-item icon="lucideRuler" [title]="b.name">
           <span tlListTrailing class="flex gap-1">
-            <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'settings.renameBodyPart' | t" (click)="renameBodyPart(b)">
+            <button
+              tlRoundButton
+              size="sm"
+              variant="ghost"
+              [attr.aria-label]="'settings.renameBodyPart' | t"
+              (click)="renameBodyPart(b)"
+            >
               <ng-icon name="lucidePencil" class="text-muted-foreground" />
             </button>
-            <button tlRoundButton size="sm" variant="ghost" [attr.aria-label]="'common.delete' | t" (click)="removeBodyPart(b)">
+            <button
+              tlRoundButton
+              size="sm"
+              variant="ghost"
+              [attr.aria-label]="'common.delete' | t"
+              (click)="removeBodyPart(b)"
+            >
               <ng-icon name="lucideTrash2" class="text-muted-foreground" />
             </button>
           </span>
         </tl-list-item>
       }
       <form class="flex items-center gap-2 py-3" (ngSubmit)="addBodyPart()">
-        <input tlInput name="newBodyPart" maxlength="50" [placeholder]="'settings.newBodyPart' | t" [(ngModel)]="newBodyPart" />
-        <button tlRoundButton variant="solid" type="submit" [attr.aria-label]="'common.add' | t" [disabled]="!newBodyPart().trim()">
+        <input
+          tlInput
+          name="newBodyPart"
+          maxlength="50"
+          [placeholder]="'settings.newBodyPart' | t"
+          [(ngModel)]="newBodyPart"
+        />
+        <button
+          tlRoundButton
+          variant="solid"
+          type="submit"
+          [attr.aria-label]="'common.add' | t"
+          [disabled]="!newBodyPart().trim()"
+        >
           <ng-icon name="lucidePlus" />
         </button>
       </form>
@@ -113,7 +183,11 @@ import { Theme } from '../../core/theme/theme';
 
     <tl-section-header [title]="'settings.appearance' | t" />
     <tl-card>
-      <tl-segmented [options]="themeOptions()" [value]="theme.mode()" (valueChange)="setTheme($event)" />
+      <tl-segmented
+        [options]="themeOptions()"
+        [value]="theme.mode()"
+        (valueChange)="setTheme($event)"
+      />
     </tl-card>
 
     <tl-section-header [title]="'settings.language' | t" />
@@ -155,10 +229,20 @@ import { Theme } from '../../core/theme/theme';
       ></button>
     </tl-list>
 
-    <footer class="text-muted-foreground mt-10 flex flex-col items-center gap-2 text-center text-sm">
+    <footer
+      class="text-muted-foreground mt-10 flex flex-col items-center gap-2 text-center text-sm"
+    >
       <tl-logo [size]="40" wordmark class="text-foreground" />
       <p>{{ 'login.slogan' | t }}</p>
     </footer>
+
+    <app-habit-sheet
+      [(open)]="habitSheetOpen"
+      [habit]="editingHabit()"
+      [newKind]="newHabitKind()"
+      [stepsGoal]="settingsData()?.dailyStepsGoal ?? null"
+      (saved)="habits.reload()"
+    />
   `,
 })
 export class SettingsPage {
@@ -172,17 +256,26 @@ export class SettingsPage {
   protected readonly habits = httpResource<Habit[]>(() => '/api/habits');
   protected readonly settingsData = safeValue(this.settings);
   protected readonly habitsData = safeValue(this.habits);
+  /** Local copy, so a dropped habit stays in place while the new order is saved. */
+  protected readonly habitOrder = linkedSignal(() => this.habitsData() ?? []);
+  protected readonly hasStepsHabit = computed(() =>
+    this.habitOrder().some((h) => h.kind === 'STEPS'),
+  );
+  protected readonly habitSheetOpen = signal(false);
+  protected readonly editingHabit = signal<Habit | null>(null);
+  protected readonly newHabitKind = signal<HabitKind>('NORMAL');
   protected readonly bodyParts = httpResource<BodyPart[]>(() => '/api/body-parts');
   protected readonly bodyPartsData = safeValue(this.bodyParts);
   protected readonly newBodyPart = signal('');
-  protected readonly syncStatus = httpResource<{ configured: boolean }>(() => '/api/auth/sync-token');
+  protected readonly syncStatus = httpResource<{ configured: boolean }>(
+    () => '/api/auth/sync-token',
+  );
   protected readonly syncStatusData = safeValue(this.syncStatus);
   protected readonly newToken = signal<string | null>(null);
   private readonly toast = inject(TlToast);
 
   protected readonly workoutGoal = signal('');
   protected readonly stepsGoal = signal('');
-  protected newHabit = '';
   protected readonly busy = signal(false);
   protected readonly goalsSaved = signal(false);
   protected readonly goalsError = signal(false);
@@ -223,24 +316,37 @@ export class SettingsPage {
     });
   }
 
-  protected async addHabit(): Promise<void> {
-    const name = this.newHabit.trim();
-    if (name && (await this.attempt(() => this.api.addHabit({ name, remindAt: null }), 'common.added'))) {
-      this.newHabit = '';
-      this.habits.reload();
-    }
+  protected openHabit(habit: Habit | null, kind: HabitKind): void {
+    this.editingHabit.set(habit);
+    this.newHabitKind.set(kind);
+    this.habitSheetOpen.set(true);
   }
 
-  protected async rename(habit: Habit): Promise<void> {
-    const name = prompt(this.i18n.t('settings.renamePrompt'), habit.name)?.trim();
-    if (name && name !== habit.name && (await this.attempt(() => this.api.updateHabit(habit.id, { name, remindAt: habit.remindAt }), 'common.saved'))) {
+  protected habitName(h: Habit): string {
+    return habitLabel(h, this.settingsData()?.dailyStepsGoal, this.i18n);
+  }
+
+  protected time(remindAt: string | null): string | null {
+    return habitTime(remindAt);
+  }
+
+  protected async dropHabit(event: CdkDragDrop<unknown>): Promise<void> {
+    if (event.previousIndex === event.currentIndex) {
+      return;
+    }
+    const list = [...this.habitOrder()];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
+    this.habitOrder.set(list);
+    if (
+      !(await this.attempt(() => this.api.reorderHabits(list.map((h) => h.id)), 'common.saved'))
+    ) {
       this.habits.reload();
     }
   }
 
   protected async removeHabit(habit: Habit): Promise<void> {
     if (
-      confirm(this.i18n.t('settings.deleteHabitConfirm', { name: habit.name })) &&
+      confirm(this.i18n.t('settings.deleteHabitConfirm', { name: this.habitName(habit) })) &&
       (await this.attempt(() => this.api.deleteHabit(habit.id), 'common.deleted'))
     ) {
       this.habits.reload();
@@ -257,7 +363,11 @@ export class SettingsPage {
 
   protected async renameBodyPart(part: BodyPart): Promise<void> {
     const name = prompt(this.i18n.t('settings.renameBodyPart'), part.name)?.trim();
-    if (name && name !== part.name && (await this.attempt(() => this.api.renameBodyPart(part.id, name), 'common.saved'))) {
+    if (
+      name &&
+      name !== part.name &&
+      (await this.attempt(() => this.api.renameBodyPart(part.id, name), 'common.saved'))
+    ) {
       this.bodyParts.reload();
     }
   }
@@ -293,7 +403,10 @@ export class SettingsPage {
   }
 
   /** Runs a write, shows a green confirmation or a red error toast; true on success. */
-  private async attempt(action: () => Promise<unknown>, successKey: TranslationKey): Promise<boolean> {
+  private async attempt(
+    action: () => Promise<unknown>,
+    successKey: TranslationKey,
+  ): Promise<boolean> {
     try {
       await action();
       this.toast.success(this.i18n.t(successKey));
@@ -316,7 +429,10 @@ export class SettingsPage {
       const current = this.settingsData();
       if (current && current.language !== value) {
         // keep the server in sync (used later for notification texts); failures are not critical
-        void this.api.saveSettings({ ...current, language: value }).then((s) => this.settings.set(s), () => {});
+        void this.api.saveSettings({ ...current, language: value }).then(
+          (s) => this.settings.set(s),
+          () => {},
+        );
       }
     }
   }

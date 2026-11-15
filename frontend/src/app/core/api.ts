@@ -133,7 +133,11 @@ export class Api {
     return firstValueFrom(this.http.delete(`/api/checkins/${weekStart}`));
   }
 
-  addWorkout(body: { date: string; category: WorkoutCategory; durationMin: number }): Promise<Workout> {
+  addWorkout(body: {
+    date: string;
+    category: WorkoutCategory;
+    durationMin: number;
+  }): Promise<Workout> {
     return firstValueFrom(this.http.post<Workout>('/api/workouts', body));
   }
 
@@ -211,6 +215,9 @@ export function parseDecimal(raw: string | null | undefined): number | null {
  * Angular's resource.value() throws while the resource is in an error state; templates read this instead,
  * which is simply undefined until data is available (and stays on the last good value on reload).
  */
-export function safeValue<T>(resource: { hasValue(): boolean; value(): T | undefined }): Signal<T | undefined> {
+export function safeValue<T>(resource: {
+  hasValue(): boolean;
+  value(): T | undefined;
+}): Signal<T | undefined> {
   return computed(() => (resource.hasValue() ? resource.value() : undefined));
 }

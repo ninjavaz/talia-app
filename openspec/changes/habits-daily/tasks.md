@@ -17,7 +17,7 @@
 ## 4. Frontend
 
 - [x] 4.1 `api.ts` types, home route and nav order, Week screen reordered (daily progress bar, habits with time, streak in days, steps habit label); verify `ng build` and `ng test` pass
-- [ ] 4.2 Settings: habit sheet (name + time), drag & drop order, add steps habit, threshold field removed, translations PL/EN; verify `ng build` and `ng test` pass
+- [x] 4.2 Settings: habit sheet (name + time), drag & drop order, add steps habit, threshold field removed, translations PL/EN; verify `ng build` and `ng test` pass
 
 ## 5. E2e (Playwright)
 
