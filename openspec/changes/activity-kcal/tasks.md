@@ -2,7 +2,7 @@
 
 ## 1. Backend tests from the requirements (written first)
 
-- [ ] 1.1 `CalorieEstimateTest` "REQ-022 ..." (MET per type, rounding, no weight) and REQ-tagged integration tests in `ActivityIntegrationTest`: "REQ-020 ..." (add, invalid incl. missing duration, delete, walk counts), "REQ-021 ..." (progress, goal change, invalid goal), "REQ-022 ..." (latest weight, weight after the workout, no weight, synced kcal wins, weekly sum); verify the REQ-022 tests fail on the current code
+- [x] 1.1 `CalorieEstimateTest` "REQ-022 ..." (MET per type, rounding, no weight) and REQ-tagged integration tests in `ActivityIntegrationTest`: "REQ-020 ..." (add, invalid incl. missing duration, delete, walk counts), "REQ-021 ..." (progress, goal change, invalid goal), "REQ-022 ..." (latest weight, weight after the workout, no weight, synced kcal wins, weekly sum); verify the REQ-022 tests fail on the current code
 
 ## 2. Backend implementation
 
