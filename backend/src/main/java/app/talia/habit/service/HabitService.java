@@ -6,6 +6,7 @@ import app.talia.common.Weeks;
 import app.talia.habit.entity.HabitEntity;
 import app.talia.habit.model.Habit;
 import app.talia.habit.model.HabitDay;
+import app.talia.habit.model.HabitKind;
 import app.talia.habit.model.HabitStats;
 import app.talia.habit.repository.HabitCheckRepository;
 import app.talia.habit.repository.HabitRepository;
@@ -54,7 +55,8 @@ public class HabitService {
 
     public Habit create(long userId, String name) {
         int sortOrder = habits.findMaxSortOrder(userId) + 1;
-        return toModel(habits.save(new HabitEntity(userId, name.trim(), sortOrder)));
+        return toModel(habits.save(new HabitEntity(userId, name.trim(), HabitKind.NORMAL, null, sortOrder,
+                LocalDate.now(clock))));
     }
 
     public Habit rename(long userId, long id, String name) {
@@ -64,7 +66,7 @@ public class HabitService {
     }
 
     public void delete(long userId, long id) {
-        find(userId, id).deactivate();
+        find(userId, id).deactivate(LocalDate.now(clock));
     }
 
     @Transactional(readOnly = true)
@@ -91,7 +93,8 @@ public class HabitService {
 
     @Transactional(readOnly = true)
     public HabitStats stats(long userId, LocalDate date) {
-        int threshold = settings.get(userId).habitWeekThresholdPct();
+        // transitional: the weekly streak is replaced by the daily streak (REQ-015) in the next task
+        int threshold = 70;
         int total = habits.countByUserIdAndActiveTrue(userId);
         int doneToday = checks.findDoneHabitIds(userId, date).size();
         // checks per week (Monday), active habits only, up to the given date

@@ -81,8 +81,9 @@ public abstract class IntegrationTest {
         jdbc.sql("UPDATE app_user SET sync_token_hash = :hash WHERE id = :id")
                 .param("hash", SYNC_TOKEN_SHA256).param("id", talia.id()).update();
         jdbc.sql("""
-                INSERT INTO habit (user_id, name, sort_order) VALUES
-                    (:id, 'Białko w posiłkach', 1), (:id, 'Warzywa do 2 posiłków', 2), (:id, 'Bez słodkich napojów', 3)
+                INSERT INTO habit (user_id, name, sort_order, created_on) VALUES
+                    (:id, 'Białko w posiłkach', 1, '2026-01-01'), (:id, 'Warzywa do 2 posiłków', 2, '2026-01-01'),
+                    (:id, 'Bez słodkich napojów', 3, '2026-01-01')
                 """).param("id", talia.id()).update();
     }
 

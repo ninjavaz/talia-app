@@ -2,7 +2,7 @@
 
 ## 1. Database
 
-- [ ] 1.1 Migration `V4__habits_daily.sql` (kind, remind_at, created_on, deactivated_on with backfill, unique active steps habit, drop habit_week_threshold_pct) and the matching entity/settings fields; verify the backend starts against it (Hibernate validate) and the existing suite still passes after removing the threshold from `AppSettings` and its tests
+- [x] 1.1 Migration `V4__habits_daily.sql` (kind, remind_at, created_on, deactivated_on with backfill, unique active steps habit, drop habit_week_threshold_pct) and the matching entity/settings fields; verify the backend starts against it (Hibernate validate) and the existing suite still passes after removing the threshold from `AppSettings` and its tests
 
 ## 2. Backend tests from the requirements (written first)
 
