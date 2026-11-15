@@ -14,18 +14,23 @@ import java.util.Optional;
 
 public interface WeightEntryRepository extends JpaRepository<WeightEntryEntity, Long> {
 
-    /** An average weight for a date (a day or the Monday of a week). */
+    /** An average weight for a date (the Monday of a week, or the day of the week's last entry). */
     interface DatedValue {
         LocalDate getDate();
 
         BigDecimal getValue();
     }
 
+/**
+     * REQ-003: one chart point per week - the average of the week's entries (manual and synced), dated on the day of
+     * the week's last entry. Oldest first.
+     */
     @Query(nativeQuery = true, value = """
-            SELECT measured_at::date AS date, round(avg(value_kg), 2) AS value
-            FROM weight_entry WHERE user_id = :userId GROUP BY 1 ORDER BY 1
+            SELECT max(measured_at)::date AS date, round(avg(value_kg), 1) AS value
+            FROM weight_entry WHERE user_id = :userId
+            GROUP BY date_trunc('week', measured_at) ORDER BY 1
             """)
-    List<DatedValue> findDailyAverages(long userId);
+    List<DatedValue> findWeeklyPoints(long userId);
 
     @Query(nativeQuery = true, value = """
             SELECT date_trunc('week', measured_at)::date AS date, round(avg(value_kg), 1) AS value

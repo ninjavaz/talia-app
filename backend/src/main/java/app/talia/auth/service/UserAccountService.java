@@ -7,6 +7,7 @@ import app.talia.auth.model.TaliaUser;
 import app.talia.auth.model.UsernameTakenException;
 import app.talia.auth.repository.AppUserRepository;
 import app.talia.common.BadRequestException;
+import app.talia.measurement.service.BodyPartService;
 import app.talia.settings.service.SettingsService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -44,13 +45,15 @@ public class UserAccountService implements UserDetailsService {
 
     private final AppUserRepository users;
     private final SettingsService settings;
+    private final BodyPartService bodyParts;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
 
-    UserAccountService(AppUserRepository users, SettingsService settings, PasswordEncoder passwordEncoder,
-                       Clock clock) {
+    UserAccountService(AppUserRepository users, SettingsService settings, BodyPartService bodyParts,
+                       PasswordEncoder passwordEncoder, Clock clock) {
         this.users = users;
         this.settings = settings;
+        this.bodyParts = bodyParts;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
@@ -90,7 +93,7 @@ public class UserAccountService implements UserDetailsService {
     }
 
     /**
-     * Creates the account with its default settings (no body parts: the user adds what they want to measure).
+     * Creates the account with its default settings and the waist body part (REQ-002).
      * The e-mail is unverified: login is possible after clicking the link from the e-mail.
      */
     public TaliaUser create(String rawUsername, String rawEmail, String password, String language) {
@@ -118,7 +121,9 @@ public class UserAccountService implements UserDetailsService {
             // two registrations at the same moment
             throw new UsernameTakenException();
         }
-        settings.createDefaults(user.getId(), "en".equals(language) ? "en" : "pl");
+        String lang = "en".equals(language) ? "en" : "pl";
+        settings.createDefaults(user.getId(), lang);
+        bodyParts.createDefaults(user.getId(), lang);
         return new TaliaUser(user.getId(), username, null);
     }
 

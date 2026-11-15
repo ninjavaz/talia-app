@@ -36,7 +36,9 @@ class DataIsolationIntegrationTest extends IntegrationTest {
     @Test
     void readsOnlyReturnOwnData() throws Exception {
         mvc.perform(get("/api/progress").with(as(ola)))
-                .andExpect(jsonPath("$.bodyParts.length()").value(0))
+                // only her own default waist (REQ-002), without values
+                .andExpect(jsonPath("$.bodyParts.length()").value(1))
+                .andExpect(jsonPath("$.bodyParts[0].points.length()").value(0))
                 .andExpect(jsonPath("$.weightPoints.length()").value(0))
                 .andExpect(jsonPath("$.avgDailyStepsThisWeek").doesNotExist());
         mvc.perform(get("/api/checkins").with(as(ola))).andExpect(jsonPath("$.length()").value(0));

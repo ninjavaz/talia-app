@@ -36,7 +36,6 @@ export interface Progress {
   weight: Metric | null;
   bodyParts: BodyPartProgress[];
   weightPoints: Point[];
-  weightTrend: Point[];
   avgDailyStepsThisWeek: number | null;
   avgDailyStepsLastWeek: number | null;
   dailyStepsGoal: number;

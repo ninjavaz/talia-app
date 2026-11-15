@@ -10,7 +10,7 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
 - Auth: single user, username/password -> session cookie. Separate static API token (stored as SHA-256 hash) only for the health-sync endpoint.
 
 ## MVP scope (build ONLY this)
-1. Measurements – weight (auto from Apple Health via sync + manual fallback), waist cm (manual, weekly), chart with raw points + 7-day moving average, delta since start (kg, cm).
+1. Measurements – weight (auto from Apple Health via sync + manual fallback), waist cm (manual, weekly), chart with one point per week (weekly average, no moving average - REQ-003), delta since start (kg, cm).
 2. Activity (from Apple Health via sync) – daily steps, workouts (type, duration, date), weekly workout goal with progress bar.
 3. Habits – configurable 3–4 daily habits, one-tap checkbox per day; streak counted in WEEKS (week counts if ≥ X% done).
 4. Weekly AI summary – Sunday job: aggregate last 7 days -> LLM (provider behind interface, key in env) -> store short Polish summary (≤ ~5 sentences, supportive but honest).
@@ -53,9 +53,9 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   (table `weekly_steps`, wins over synced daily steps). One check-in per week, saving again replaces it.
   In-app reminder card on Progress when due (Sunday, or >7 days since the last waist). Habits are a daily checklist on the
   Week screen, workouts are added manually there. Health sync stays as an optional automatic source.
-- **Custom body measurements**: `body_part` and `body_measurement`. **No built-in waist (2026-11-14)**: a new account has
-  no body parts, the user adds what they want to measure in Settings (all renamable/deletable). The headline tile on
-  Progress shows the first body part of the list. The check-in sends `measurements: [{partId, valueCm}]` and
+- **Custom body measurements**: `body_part` and `body_measurement`. A new account starts with one ordinary body part
+  "Talia"/"Waist" (by registration language, REQ-002, 2026-11-15); the user adds more in Settings (all
+  renamable/deletable). The headline tile on Progress shows the first body part of the list. The check-in sends `measurements: [{partId, valueCm}]` and
   *replaces* the week's manual data.
 - UX: every save shows a green `TlToast` (`<tl-toaster>` in the app root); checking a habit fires `diamondBurst()` 💎
   (bigger when all habits are done); clickable things have `cursor: pointer` and a subtle hover scale.
@@ -91,6 +91,9 @@ Calorie counting, recipes, multi-user, social features, native iOS app, photo an
 Later maybe: pill-break marking, food ideas, native iOS app.
 
 ## How to work
+- **Language (2026-11-15)**: everything written into the repo or GitHub is in **English**: documentation, README,
+  OpenSpec artifacts, code comments, commit messages, PR titles and descriptions. The UI stays PL + EN (i18n);
+  conversation with the user is in Polish.
 - Small steps: backend skeleton -> sync endpoint + tests -> measurements -> frontend shell + PWA -> charts -> habits -> AI summary -> push -> Docker Compose + Caddyfile.
 - Keep it simple: no microservices, no premature abstractions, one Spring module.
 - **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
