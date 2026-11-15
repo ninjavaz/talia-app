@@ -10,7 +10,8 @@ services:
     environment:
       POSTGRES_DB: talia
       POSTGRES_USER: talia
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      # required: the database does not start without it
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     # tuned down for a 1 GB server
     command: >
       postgres -c shared_buffers=48MB -c effective_cache_size=128MB -c work_mem=2MB
