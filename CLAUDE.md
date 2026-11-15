@@ -82,7 +82,8 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   habit type (goal from settings) and the steps field of the check-in stays; workout duration stays required;
   home screen = today's habits + quick workout add (every daily entry <= 2 taps); Web Push in the PWA now, incl. an
   evening push when the day is not complete yet (streak at risk); estimated burned kcal (MET x latest weight x duration)
-  shown on the workout list and as a weekly sum on the Week screen (burned, not food calories); WALK type still open;
+  shown on the workout list and as a weekly sum on the Week screen (burned, not food calories); WALK stays a normal
+  workout type that counts towards the weekly goal (no extra setting);
   **AI summary (REQ-040/041) and "summary ready" push (REQ-032) stay in v2**.
 
 ## Non-goals
@@ -92,6 +93,10 @@ Later maybe: pill-break marking, food ideas, native iOS app.
 ## How to work
 - Small steps: backend skeleton -> sync endpoint + tests -> measurements -> frontend shell + PWA -> charts -> habits -> AI summary -> push -> Docker Compose + Caddyfile.
 - Keep it simple: no microservices, no premature abstractions, one Spring module.
+- **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
+  its own branch from `develop` (e.g. `feature/measurements-weekly`), pushed and opened as a PR into `develop` with
+  `gh pr create --base develop`; the user decides when to merge (merging happens from here with `gh pr merge`).
+  `develop` -> `main` via PR when a set of groups is done. gh CLI: `C:\Program Files\GitHub CLI\gh.exe`.
 - **OpenSpec** (`openspec/`, rules in `openspec/config.yaml`, commands `/opsx:propose`, `/opsx:apply`, `/opsx:archive`):
   one change per requirement group with REQ-IDs; order migration -> backend + Testcontainers tests -> frontend ->
   Playwright e2e; tests first, REQ-ID in every test name, tasks up to ~200 lines of diff, full build after each task.
