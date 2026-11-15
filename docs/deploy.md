@@ -80,22 +80,32 @@ Open `https://<server>.mikrus.cloud`. The first start creates the database schem
 
 ## 6. Client IP behind the Mikrus proxy
 
-The backend limits failed logins and registrations per client IP. Behind the Mikrus proxy Caddy must know the proxy's
-address to read the real client IP from `X-Forwarded-For`. Open the app once in the browser, then:
+The backend limits failed logins and registrations per client IP. Requests reach the server through the Mikrus
+proxy, which puts the real client IP into `X-Forwarded-For`. Caddy (in the host network, so it sees who really
+connects) believes that header only from `TRUSTED_PROXIES`; anyone connecting directly cannot fake an address.
+
+Set the Mikrus proxy network in `.env` (measured on 2026-11-15; Hetzner gives each machine a /64):
 
 ```bash
-docker compose -f compose.prod.yml logs web --tail 20
+TRUSTED_PROXIES=2a01:4f9:c013:f5c9::/64
 ```
 
-Each request line shows `remote_ip` (who connected to Caddy: the Mikrus proxy) and `client_ip`. Put the proxy
-address(es) into `.env`, e.g. `TRUSTED_PROXIES=2a01:4f9:xxxx::1/128` (several separated by spaces), then:
+and apply it: `docker compose -f compose.prod.yml up -d web`. Open the app, then check the log:
 
 ```bash
-docker compose -f compose.prod.yml up -d web
+docker compose -f compose.prod.yml logs web --tail 5
 ```
 
-Open the app again: `client_ip` in the log must now be your own address (compare with https://ifconfig.co on your
-phone or computer), not the proxy's.
+`remote_ip` must be the proxy (`2a01:4f9:c013:f5c9::...`) and `client_ip` your own address (compare with
+https://ifconfig.co). If `client_ip` equals `remote_ip`, the proxy address changed; find the new one while reloading
+the app (30 seconds, read-only):
+
+```bash
+docker run --rm --network host --cap-add NET_RAW --cap-add NET_ADMIN alpine:3.22   sh -c "apk add -q tcpdump >/dev/null && timeout 30 tcpdump -nqi any 'tcp dst port 80' 2>/dev/null | awk '{print \$2, \$3, \$5}' | sed 's/\.[0-9]*\$//' | sort | uniq -c"
+```
+
+The address on `eth0 In` is the proxy. Until it is trusted, all users share the proxy's address for the rate limits
+(stricter, never looser).
 
 ## 7. E-mails
 
@@ -164,7 +174,7 @@ docker compose -f compose.prod.yml start backend
 1. Point the domain to the server: an `AAAA` record with the server's IPv6 address (with Cloudflare: proxied, SSL mode
    "Full (strict)", and use a Cloudflare origin certificate or keep Caddy's own certificate).
 2. In `.env`: `SITE_ADDRESS=mytalia.app`, `PUBLIC_URL=https://mytalia.app`.
-3. In `compose.prod.yml` add `"443:443"` to the ports of `web`.
-4. `docker compose -f compose.prod.yml up -d`. Caddy requests a Let's Encrypt certificate on the first request.
+3. `docker compose -f compose.prod.yml up -d web` (Caddy listens on ports 80 and 443 of the server directly) and
+   requests a Let's Encrypt certificate on the first request.
 
 Devices subscribed to push on the old address must enable notifications again on the new one.
