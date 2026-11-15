@@ -66,7 +66,9 @@ export interface Workout {
   durationMin: number;
   type: string;
   category: WorkoutCategory;
+  /** Burned kcal: from Apple Health, or estimated (REQ-022); null without a weight. */
   kcal: number | null;
+  kcalEstimated: boolean;
 }
 
 /** doneToday / total: today's progress (REQ-014); streakDays: consecutive completed days (REQ-015). */
@@ -82,6 +84,8 @@ export interface WeekView {
   workoutGoal: number;
   workoutsDone: number;
   workouts: Workout[];
+  /** Sum of the week's workout kcal (REQ-022), null when none has kcal. */
+  kcalTotal: number | null;
   avgDailySteps: number | null;
   dailyStepsGoal: number;
   habits: HabitStats;

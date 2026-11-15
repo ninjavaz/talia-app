@@ -38,6 +38,12 @@ public interface WeightEntryRepository extends JpaRepository<WeightEntryEntity, 
             """)
     List<DatedValue> findWeeklyAverages(long userId);
 
+    /** Latest entry before {@code until} (exclusive). */
+    Optional<WeightEntryEntity> findFirstByUserIdAndMeasuredAtLessThanOrderByMeasuredAtDesc(long userId,
+                                                                                          LocalDateTime until);
+
+    Optional<WeightEntryEntity> findFirstByUserIdOrderByMeasuredAtAsc(long userId);
+
     @Query("select max(w.measuredAt) from WeightEntryEntity w where w.userId = :userId and w.source = 'MANUAL'")
     Optional<LocalDateTime> findLastManual(long userId);
 

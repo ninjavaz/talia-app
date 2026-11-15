@@ -84,8 +84,9 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   day are checked; a habit added later does not break the earlier streak), rule kept in one place; steps are a special
   habit type (goal from settings) and the steps field of the check-in stays; workout duration stays required;
   home screen = today's habits + quick workout add (every daily entry <= 2 taps); Web Push in the PWA now, incl. an
-  evening push when the day is not complete yet (streak at risk); estimated burned kcal (MET x latest weight x duration)
-  shown on the workout list and as a weekly sum on the Week screen (burned, not food calories); WALK stays a normal
+  evening push when the day is not complete yet (streak at risk); estimated burned kcal
+  (REQ-022: MET gym 5 / pilates 3 / walk 3.5 / other 4 x weight on that day x hours, computed on read in
+  `CalorieEstimate`; Health kcal > 0 wins) on the workout list and as a weekly sum (burned, not food calories); WALK stays a normal
   workout type that counts towards the weekly goal (no extra setting);
   **AI summary (REQ-040/041) and "summary ready" push (REQ-032) stay in v2**.
 

@@ -118,6 +118,11 @@ import { WorkoutSheet } from './workout-sheet';
           [label]="'week.streak' | t"
         />
       </div>
+      @if (w?.kcalTotal; as kcal) {
+        <p class="text-muted-foreground mt-3 text-center text-xs" data-testid="kcal-total">
+          {{ 'week.kcalTotal' | t: { kcal: i18n.num(kcal, 0) } }}
+        </p>
+      }
     </tl-panel>
 
     <tl-section-header [title]="'week.workoutsList' | t">
@@ -224,6 +229,11 @@ export class WeekPage {
 
   protected workoutSubtitle(w: Workout): string {
     const day = this.i18n.date(w.startedAt, { weekday: 'short', day: 'numeric', month: 'numeric' });
-    return `${day} · ${w.durationMin} ${this.i18n.t('workout.minutes')}`;
+    const parts = [day, `${w.durationMin} ${this.i18n.t('workout.minutes')}`];
+    if (w.kcal !== null) {
+      const kcal = this.i18n.num(w.kcal, 0);
+      parts.push(this.i18n.t(w.kcalEstimated ? 'workout.kcalEstimated' : 'workout.kcal', { kcal }));
+    }
+    return parts.join(' · ');
   }
 }
