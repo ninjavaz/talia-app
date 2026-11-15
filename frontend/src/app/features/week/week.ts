@@ -1,5 +1,5 @@
 import { httpResource } from '@angular/common/http';
-import { Component, inject, linkedSignal, signal } from '@angular/core';
+import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -9,6 +9,7 @@ import {
   TlListItem,
   TlPageHeader,
   TlPanel,
+  TlProgressBar,
   TlRing,
   TlRoundButton,
   TlSectionHeader,
@@ -17,12 +18,13 @@ import {
   diamondBurst,
 } from '@talia/ui';
 import { Api, HabitDay, WeekView, Workout, isoDate, safeValue } from '../../core/api';
+import { habitLabel, habitTime } from '../../core/habits';
 import { I18n, TranslatePipe } from '../../core/i18n/i18n';
 import { TranslationKey } from '../../core/i18n/translations';
 import { WORKOUT_ICONS } from '../../core/icons';
 import { WorkoutSheet } from './workout-sheet';
 
-/** This week: workouts vs goal, today's habit checklist and the list of workouts. */
+/** Start screen (REQ-052): today's habits with progress, then the week's workouts vs goal and the streak. */
 @Component({
   selector: 'app-week',
   imports: [
@@ -34,6 +36,7 @@ import { WorkoutSheet } from './workout-sheet';
     TlListItem,
     TlPageHeader,
     TlPanel,
+    TlProgressBar,
     TlRing,
     TlRoundButton,
     TlSectionHeader,
@@ -45,40 +48,45 @@ import { WorkoutSheet } from './workout-sheet';
     @let w = weekData();
     <tl-page-header [title]="'week.title' | t" [subtitle]="w ? i18n.weekRange(w.weekStart, w.weekEnd) : null" />
 
-    <tl-panel [title]="'week.panel' | t">
-      <div class="flex items-center justify-between">
-        <tl-stat class="w-20" [value]="i18n.compact(w?.avgDailySteps)" [label]="'week.avgSteps' | t" />
-        <tl-ring [value]="w?.workoutsDone ?? 0" [max]="w?.workoutGoal || 1" [size]="150" [stroke]="12">
-          <span class="text-4xl font-semibold tabular-nums">{{ w?.workoutsDone ?? 0 }}</span>
-          <span class="text-muted-foreground text-xs">{{ 'week.of' | t: { goal: w?.workoutGoal ?? 0 } }}</span>
-        </tl-ring>
-        <tl-stat class="w-20" [value]="(w?.habits?.weekPct ?? 0) + '%'" [label]="'week.habits' | t" />
-      </div>
-    </tl-panel>
-
+    <!-- REQ-052: today's habits come first; every tap here is a complete entry -->
     <tl-section-header [title]="'week.habitsToday' | t">
       <span class="text-muted-foreground text-sm first-letter:uppercase">
         {{ i18n.date(today, { weekday: 'long', day: 'numeric', month: 'numeric' }) }}
       </span>
     </tl-section-header>
     @if (habits().length) {
+      <tl-card class="mb-3" data-testid="today-progress">
+        <div class="mb-2 flex items-baseline justify-between text-sm">
+          <span class="font-semibold">
+            {{ (doneToday() === habits().length ? 'week.allDone' : 'week.todayProgress') | t: { done: doneToday(), total: habits().length } }}
+          </span>
+          <span class="text-muted-foreground tabular-nums">{{ doneToday() }}/{{ habits().length }}</span>
+        </div>
+        <tl-progress-bar [value]="doneToday()" [max]="habits().length" />
+      </tl-card>
       <tl-list>
         @for (h of habits(); track h.id) {
-          <tl-list-item [title]="h.name">
-            <button tlListTrailing tlCheck [checked]="h.done" [attr.aria-label]="h.name" (click)="toggle(h, $event)"></button>
+          <tl-list-item [title]="label(h)" [subtitle]="time(h.remindAt)">
+            <button tlListTrailing tlCheck [checked]="h.done" [attr.aria-label]="label(h)" (click)="toggle(h, $event)"></button>
           </tl-list-item>
         }
       </tl-list>
-      @if (w?.habits; as s) {
-        <p class="text-muted-foreground mt-2 px-2 text-xs">
-          {{ 'week.streak' | t: { weeks: s.streakWeeks, pct: s.thresholdPct } }}
-        </p>
-      }
     } @else if (!habitDay.isLoading()) {
       <a routerLink="/settings">
         <tl-card><p class="text-muted-foreground text-sm">{{ 'week.habitsEmpty' | t }}</p></tl-card>
       </a>
     }
+
+    <tl-panel class="mt-6" [title]="'week.panel' | t">
+      <div class="flex items-center justify-between">
+        <tl-stat class="w-20" [value]="i18n.compact(w?.avgDailySteps)" [label]="'week.avgSteps' | t" />
+        <tl-ring [value]="w?.workoutsDone ?? 0" [max]="w?.workoutGoal || 1" [size]="150" [stroke]="12">
+          <span class="text-4xl font-semibold tabular-nums">{{ w?.workoutsDone ?? 0 }}</span>
+          <span class="text-muted-foreground text-xs">{{ 'week.of' | t: { goal: w?.workoutGoal ?? 0 } }}</span>
+        </tl-ring>
+        <tl-stat class="w-20" data-testid="streak" [value]="w?.habits?.streakDays ?? 0" [label]="'week.streak' | t" />
+      </div>
+    </tl-panel>
 
     <tl-section-header [title]="'week.workoutsList' | t">
       <button tlRoundButton size="sm" [attr.aria-label]="'week.addWorkout' | t" (click)="workoutOpen.set(true)">
@@ -124,6 +132,16 @@ export class WeekPage {
   /** Local copy for optimistic toggling. */
   protected readonly habits = linkedSignal(() => this.habitDayData() ?? []);
   protected readonly workoutOpen = signal(false);
+  /** Counted from the local list, so the bar moves on the tap, before the server answers (REQ-014). */
+  protected readonly doneToday = computed(() => this.habits().filter((h) => h.done).length);
+
+  protected label(h: HabitDay): string {
+    return habitLabel(h, this.weekData()?.dailyStepsGoal, this.i18n);
+  }
+
+  protected time(remindAt: string | null): string | null {
+    return habitTime(remindAt);
+  }
 
   protected async toggle(habit: HabitDay, event: Event): Promise<void> {
     const done = !habit.done;

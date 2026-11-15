@@ -56,9 +56,6 @@ import { Theme } from '../../core/theme/theme';
             <input tlInput name="steps" inputmode="numeric" [(ngModel)]="stepsGoal" />
           </tl-field>
         </div>
-        <tl-field [label]="'settings.threshold' | t" unit="%">
-          <input tlInput name="threshold" inputmode="numeric" [(ngModel)]="threshold" />
-        </tl-field>
         @if (goalsError()) {
           <p class="text-destructive text-sm" role="alert">{{ 'common.saveError' | t }}</p>
         }
@@ -185,7 +182,6 @@ export class SettingsPage {
 
   protected readonly workoutGoal = signal('');
   protected readonly stepsGoal = signal('');
-  protected readonly threshold = signal('');
   protected newHabit = '';
   protected readonly busy = signal(false);
   protected readonly goalsSaved = signal(false);
@@ -211,7 +207,6 @@ export class SettingsPage {
       if (s) {
         this.workoutGoal.set(String(s.weeklyWorkoutGoal));
         this.stepsGoal.set(String(s.dailyStepsGoal));
-        this.threshold.set(String(s.habitWeekThresholdPct));
       }
     });
   }
@@ -225,13 +220,12 @@ export class SettingsPage {
       ...current,
       weeklyWorkoutGoal: Number(this.workoutGoal()),
       dailyStepsGoal: Number(this.stepsGoal().replace(/\s/g, '')),
-      habitWeekThresholdPct: Number(this.threshold()),
     });
   }
 
   protected async addHabit(): Promise<void> {
     const name = this.newHabit.trim();
-    if (name && (await this.attempt(() => this.api.addHabit(name), 'common.added'))) {
+    if (name && (await this.attempt(() => this.api.addHabit({ name, remindAt: null }), 'common.added'))) {
       this.newHabit = '';
       this.habits.reload();
     }
@@ -239,7 +233,7 @@ export class SettingsPage {
 
   protected async rename(habit: Habit): Promise<void> {
     const name = prompt(this.i18n.t('settings.renamePrompt'), habit.name)?.trim();
-    if (name && name !== habit.name && (await this.attempt(() => this.api.renameHabit(habit.id, name), 'common.saved'))) {
+    if (name && name !== habit.name && (await this.attempt(() => this.api.updateHabit(habit.id, { name, remindAt: habit.remindAt }), 'common.saved'))) {
       this.habits.reload();
     }
   }

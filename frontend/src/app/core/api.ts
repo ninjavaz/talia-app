@@ -69,12 +69,11 @@ export interface Workout {
   kcal: number | null;
 }
 
+/** doneToday / total: today's progress (REQ-014); streakDays: consecutive completed days (REQ-015). */
 export interface HabitStats {
   doneToday: number;
   total: number;
-  weekPct: number;
-  thresholdPct: number;
-  streakWeeks: number;
+  streakDays: number;
 }
 
 export interface WeekView {
@@ -88,22 +87,36 @@ export interface WeekView {
   habits: HabitStats;
 }
 
+/** STEPS: "daily steps goal reached", shown with the goal instead of its name (REQ-013). */
+export type HabitKind = 'NORMAL' | 'STEPS';
+
 export interface Habit {
   id: number;
   name: string;
+  kind: HabitKind;
+  /** "HH:mm" or null (REQ-011). */
+  remindAt: string | null;
   sortOrder: number;
 }
 
 export interface HabitDay {
   id: number;
   name: string;
+  kind: HabitKind;
+  remindAt: string | null;
   done: boolean;
+}
+
+/** Create/update body: `name` must be null for the steps habit; `kind` is only read on create. */
+export interface HabitInput {
+  name: string | null;
+  remindAt: string | null;
+  kind?: HabitKind;
 }
 
 export interface Settings {
   weeklyWorkoutGoal: number;
   dailyStepsGoal: number;
-  habitWeekThresholdPct: number;
   language: 'pl' | 'en';
 }
 
@@ -133,12 +146,16 @@ export class Api {
     return firstValueFrom(done ? this.http.put(url, null) : this.http.delete(url));
   }
 
-  addHabit(name: string): Promise<Habit> {
-    return firstValueFrom(this.http.post<Habit>('/api/habits', { name }));
+  addHabit(body: HabitInput): Promise<Habit> {
+    return firstValueFrom(this.http.post<Habit>('/api/habits', body));
   }
 
-  renameHabit(id: number, name: string): Promise<Habit> {
-    return firstValueFrom(this.http.put<Habit>(`/api/habits/${id}`, { name }));
+  updateHabit(id: number, body: HabitInput): Promise<Habit> {
+    return firstValueFrom(this.http.put<Habit>(`/api/habits/${id}`, body));
+  }
+
+  reorderHabits(ids: number[]): Promise<unknown> {
+    return firstValueFrom(this.http.put('/api/habits/order', { ids }));
   }
 
   deleteHabit(id: number): Promise<unknown> {
