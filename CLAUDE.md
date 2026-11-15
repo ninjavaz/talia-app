@@ -116,6 +116,10 @@ Later maybe: pill-break marking, food ideas, native iOS app.
 - **Planned: Cloudflare Tunnel (2026-11-15)**: after buying `mytalia.app`, switch from the Mikrus gateway (trusted
   `TRUSTED_PROXIES` /64, undocumented address) to a Cloudflare Tunnel (`cloudflared`, no public port, client IP only
   via loopback). Plan: `openspec/changes/cloudflare-tunnel/`.
+- **Commits (2026-11-15)**: Conventional Commits, `<type>(<scope>): <subject>` (types feat fix docs style refactor perf
+  test build ci chore revert; scope optional, lower case, e.g. backend frontend habits push deploy; first line <= 100
+  chars, English). Enforced by `.githooks/commit-msg` (enable per clone: `scripts\setup-git-hooks.cmd`) and by the
+  `commits` job in CI for every commit of a pull request. PR titles follow the same format.
 - **Git flow (2026-11-15)**: `main` = released, `develop` = integration. Every requirement group / OpenSpec change on
   its own branch from `develop` (e.g. `feature/measurements-weekly`), pushed and opened as a PR into `develop` with
   `gh pr create --base develop`; the user decides when to merge (merging happens from here with `gh pr merge`).
