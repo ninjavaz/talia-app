@@ -80,7 +80,9 @@ activity and daily habits. **NO calorie counting.** UI language: **Polish**. Mob
   delta from the first real measurement; habit streak counted in **days** (a day counts when all habits active on that
   day are checked; a habit added later does not break the earlier streak), rule kept in one place; steps are a special
   habit type (goal from settings) and the steps field of the check-in stays; workout duration stays required;
-  home screen = today's habits + quick workout add (every daily entry <= 2 taps); Web Push in the PWA now;
+  home screen = today's habits + quick workout add (every daily entry <= 2 taps); Web Push in the PWA now, incl. an
+  evening push when the day is not complete yet (streak at risk); estimated burned kcal (MET x latest weight x duration)
+  shown on the workout list and as a weekly sum on the Week screen (burned, not food calories); WALK type still open;
   **AI summary (REQ-040/041) and "summary ready" push (REQ-032) stay in v2**.
 
 ## Non-goals
