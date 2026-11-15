@@ -10,7 +10,7 @@
 
 ## 3. Frontend
 
-- [ ] 3.1 Types in `api.ts`, kcal in the workout subtitle, weekly sum in the workouts panel, translations PL/EN; verify `ng build` and `ng test` pass
+- [x] 3.1 Types in `api.ts`, kcal in the workout subtitle, weekly sum in the workouts panel, translations PL/EN; verify `ng build` and `ng test` pass
 
 ## 4. E2e (Playwright)
 

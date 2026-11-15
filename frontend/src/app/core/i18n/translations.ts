@@ -120,6 +120,9 @@ const pl = {
   'workout.type': 'Rodzaj',
   'workout.date': 'Dzień',
   'workout.duration': 'Czas trwania',
+  'workout.kcal': '{kcal} kcal',
+  'workout.kcalEstimated': '~{kcal} kcal',
+  'week.kcalTotal': 'ok. {kcal} kcal spalone w tym tygodniu (szacunek)',
   'workout.minutes': 'min',
 
   'settings.title': 'Ustawienia',
@@ -283,6 +286,9 @@ const en: Record<TranslationKey, string> = {
   'workout.type': 'Type',
   'workout.date': 'Day',
   'workout.duration': 'Duration',
+  'workout.kcal': '{kcal} kcal',
+  'workout.kcalEstimated': '~{kcal} kcal',
+  'week.kcalTotal': 'about {kcal} kcal burned this week (estimate)',
   'workout.minutes': 'min',
 
   'settings.title': 'Settings',
