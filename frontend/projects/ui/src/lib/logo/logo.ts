@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, booleanAttribute, computed, input, numberAttribute } from '@angular/core';
 
 /**
- * Talia logo: two curves forming a waist silhouette )( with a small diamond at the narrowest point,
+ * MyTalia logo: two curves forming a waist silhouette )( with a small diamond at the narrowest point,
  * on a charcoal tile. Colours follow the theme tokens. `wordmark` adds the name next to the mark.
  *
  * <tl-logo [size]="64" wordmark />
@@ -44,7 +44,7 @@ import { ChangeDetectionStrategy, Component, booleanAttribute, computed, input, 
 export class TlLogo {
   readonly size = input(40, { transform: numberAttribute });
   readonly wordmark = input(false, { transform: booleanAttribute });
-  readonly label = input('Talia');
+  readonly label = input('MyTalia');
 
   protected readonly fontSize = computed(() => Math.round(this.size() * 0.72));
 }

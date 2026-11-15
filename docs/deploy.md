@@ -33,10 +33,11 @@ the server can pull them without a login. The images contain no secrets.
 ## 3. Get the deployment files
 
 ```bash
-mkdir -p ~/talia && cd ~/talia
+mkdir -p /apps/talia && cd /apps/talia
 base=https://raw.githubusercontent.com/ninjavaz/talia-app/main/deploy
 curl -fsSLO "$base/compose.prod.yml"
 curl -fsSLO "$base/backup.sh"
+curl -fsSLO "$base/update.sh" && chmod +x update.sh
 curl -fsSL "$base/.env.example" -o .env
 chmod 600 .env
 mkdir -p backups
@@ -68,7 +69,7 @@ Keep the other values. Never change `DB_PASSWORD` after the first start (the dat
 ## 5. Start
 
 ```bash
-cd ~/talia
+cd /apps/talia
 docker compose -f compose.prod.yml pull
 docker compose -f compose.prod.yml up -d
 docker compose -f compose.prod.yml ps          # all services "running" / "healthy" after about a minute
@@ -117,23 +118,25 @@ from the home screen (iOS 16.4+).
 
 ## 9. Updates and rollback
 
-Every merge to `main` publishes new images (tagged `latest` and with the commit SHA). To update:
+Every merge to `main` publishes new images (tagged `latest` and with the commit SHA). When the `CI` workflow on
+`main` is green (about 5-8 minutes after the merge), update the server with one command:
 
 ```bash
-cd ~/talia
-docker compose -f compose.prod.yml pull
-docker compose -f compose.prod.yml up -d
-docker image prune -f                          # free disk space (old images)
+cd /apps/talia
+./update.sh
 ```
 
-Rollback: set `TAG=<commit sha>` in `.env` and run the two commands again. Database migrations only go forward, so
-roll back only to a version with the same migrations, or restore a backup.
+`update.sh` refreshes `compose.prod.yml`, `backup.sh` and itself from GitHub, makes a database backup
+(`backups/before-update-*.sql.gz`, kept 30 days), pulls the images, restarts, waits until the backend is healthy
+(database migrations run at its start) and removes old images. It never changes `.env`, except `TAG` below.
 
-When `compose.prod.yml` or `backup.sh` change in the repository, download them again (section 3, without `.env`).
+Rollback to an earlier version: `./update.sh <commit sha>` (the SHA of a commit on `main`, e.g. from the GitHub
+history); back to the newest: `./update.sh latest`. Database migrations only go forward, so roll back only to a
+version with the same migrations, or restore the backup made before the update (section 10).
 
 ## 10. Backups
 
-`backup` writes `~/talia/backups/talia-YYYY-MM-DD.sql.gz` every night at 03:00 UTC and keeps 14 days. A backup
+`backup` writes `/apps/talia/backups/talia-YYYY-MM-DD.sql.gz` every night at 03:00 UTC and keeps 14 days. A backup
 right now (e.g. before an update):
 
 ```bash
@@ -141,13 +144,13 @@ docker compose -f compose.prod.yml exec backup sh -c 'pg_dump --no-owner | gzip 
 ```
 
  Copy them off the server now
-and then (on your computer: `scp -P <ssh-port> root@<server-host>:~/talia/backups/*.sql.gz .`); they contain all
+and then (on your computer: `scp -P <ssh-port> root@<server-host>:/apps/talia/backups/*.sql.gz .`); they contain all
 personal data, keep them private.
 
 Restore into an empty database (stops the backend meanwhile):
 
 ```bash
-cd ~/talia
+cd /apps/talia
 docker compose -f compose.prod.yml stop backend
 gunzip -c backups/talia-YYYY-MM-DD.sql.gz | docker compose -f compose.prod.yml exec -T db psql -U talia -d talia
 docker compose -f compose.prod.yml start backend
