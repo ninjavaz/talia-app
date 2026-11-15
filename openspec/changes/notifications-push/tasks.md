@@ -6,7 +6,7 @@
 
 ## 2. Push infrastructure (tests first)
 
-- [ ] 2.1 `WebPushCryptoTest` (RFC 8291 test vector) and `VapidTest` (JWT verifies with the public key, claims) first, then `WebPushCrypto` and `Vapid`; verify both pass
+- [x] 2.1 `WebPushCryptoTest` (RFC 8291 test vector) and `VapidTest` (JWT verifies with the public key, claims) first, then `WebPushCrypto` and `Vapid`; verify both pass
 - [ ] 2.2 Subscription API tests "REQ-033 ..." (subscribe, update, unsubscribe, unknown host/http rejected, limit, login required, isolation) and a `WebPushClient` test against a local HTTP server (headers, body size, 410 deletes); then `PushController`, `PushService`, `WebPushClient`; verify all backend tests pass
 
 ## 3. Reminders (tests first)
