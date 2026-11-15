@@ -33,7 +33,7 @@ the server can pull them without a login. The images contain no secrets.
 ## 3. Get the deployment files
 
 ```bash
-mkdir -p ~/talia && cd ~/talia
+mkdir -p /apps/talia && cd /apps/talia
 base=https://raw.githubusercontent.com/ninjavaz/talia-app/main/deploy
 curl -fsSLO "$base/compose.prod.yml"
 curl -fsSLO "$base/backup.sh"
@@ -68,7 +68,7 @@ Keep the other values. Never change `DB_PASSWORD` after the first start (the dat
 ## 5. Start
 
 ```bash
-cd ~/talia
+cd /apps/talia
 docker compose -f compose.prod.yml pull
 docker compose -f compose.prod.yml up -d
 docker compose -f compose.prod.yml ps          # all services "running" / "healthy" after about a minute
@@ -120,7 +120,7 @@ from the home screen (iOS 16.4+).
 Every merge to `main` publishes new images (tagged `latest` and with the commit SHA). To update:
 
 ```bash
-cd ~/talia
+cd /apps/talia
 docker compose -f compose.prod.yml pull
 docker compose -f compose.prod.yml up -d
 docker image prune -f                          # free disk space (old images)
@@ -133,7 +133,7 @@ When `compose.prod.yml` or `backup.sh` change in the repository, download them a
 
 ## 10. Backups
 
-`backup` writes `~/talia/backups/talia-YYYY-MM-DD.sql.gz` every night at 03:00 UTC and keeps 14 days. A backup
+`backup` writes `/apps/talia/backups/talia-YYYY-MM-DD.sql.gz` every night at 03:00 UTC and keeps 14 days. A backup
 right now (e.g. before an update):
 
 ```bash
@@ -141,13 +141,13 @@ docker compose -f compose.prod.yml exec backup sh -c 'pg_dump --no-owner | gzip 
 ```
 
  Copy them off the server now
-and then (on your computer: `scp -P <ssh-port> root@<server-host>:~/talia/backups/*.sql.gz .`); they contain all
+and then (on your computer: `scp -P <ssh-port> root@<server-host>:/apps/talia/backups/*.sql.gz .`); they contain all
 personal data, keep them private.
 
 Restore into an empty database (stops the backend meanwhile):
 
 ```bash
-cd ~/talia
+cd /apps/talia
 docker compose -f compose.prod.yml stop backend
 gunzip -c backups/talia-YYYY-MM-DD.sql.gz | docker compose -f compose.prod.yml exec -T db psql -U talia -d talia
 docker compose -f compose.prod.yml start backend
