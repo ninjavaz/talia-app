@@ -113,6 +113,9 @@ Later maybe: pill-break marking, food ideas, native iOS app.
   `.env.example`. Images built by `.github/workflows/ci.yml` on `main` -> `ghcr.io/ninjavaz/talia-{backend,web}`
   (`latest` + SHA). The user runs the server commands himself from `docs/deploy.md`; app directory on the server: `/apps/talia`. No inline scripts in
   `index.html` (CSP `script-src 'self'`).
+- **Planned: Cloudflare Tunnel (2026-11-15)**: after buying `mytalia.app`, switch from the Mikrus gateway (trusted
+  `TRUSTED_PROXIES` /64, undocumented address) to a Cloudflare Tunnel (`cloudflared`, no public port, client IP only
+  via loopback). Plan: `openspec/changes/cloudflare-tunnel/`.
 - **Commits (2026-11-15)**: Conventional Commits, `<type>(<scope>): <subject>` (types feat fix docs style refactor perf
   test build ci chore revert; scope optional, lower case, e.g. backend frontend habits push deploy; first line <= 100
   chars, English). Enforced by `.githooks/commit-msg` (enable per clone: `scripts\setup-git-hooks.cmd`) and by the
