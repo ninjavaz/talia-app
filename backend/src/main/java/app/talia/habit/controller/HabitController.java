@@ -3,6 +3,7 @@ package app.talia.habit.controller;
 import app.talia.auth.model.TaliaUser;
 import app.talia.habit.model.Habit;
 import app.talia.habit.model.HabitDay;
+import app.talia.habit.model.HabitOrderRequest;
 import app.talia.habit.model.HabitRequest;
 import app.talia.habit.model.HabitStats;
 import app.talia.habit.service.HabitService;
@@ -45,12 +46,19 @@ class HabitController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     Habit create(@AuthenticationPrincipal TaliaUser user, @Valid @RequestBody HabitRequest body) {
-        return service.create(user.id(), body.name());
+        return service.create(user.id(), body);
     }
 
     @PutMapping("/{id}")
-    Habit rename(@AuthenticationPrincipal TaliaUser user, @PathVariable long id, @Valid @RequestBody HabitRequest body) {
-        return service.rename(user.id(), id, body.name());
+    Habit update(@AuthenticationPrincipal TaliaUser user, @PathVariable long id, @Valid @RequestBody HabitRequest body) {
+        return service.update(user.id(), id, body);
+    }
+
+    /** New order of all active habits (REQ-010). */
+    @PutMapping("/order")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void reorder(@AuthenticationPrincipal TaliaUser user, @Valid @RequestBody HabitOrderRequest body) {
+        service.reorder(user.id(), body.ids());
     }
 
     @DeleteMapping("/{id}")

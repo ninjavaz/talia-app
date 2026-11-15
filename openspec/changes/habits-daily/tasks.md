@@ -11,8 +11,8 @@
 
 ## 3. Backend implementation
 
-- [ ] 3.1 `StreakRule` + `HabitService.stats` with `streakDays`; verify the REQ-015 tests pass
-- [ ] 3.2 Habit kind/time/created_on/deactivated_on in service and models, default habits on account creation, reorder endpoint, steps habit rules; verify all backend tests pass (`mvnw test`)
+- [x] 3.1 `StreakRule` + `HabitService.stats` with `streakDays`; verify the REQ-015 tests pass
+- [x] 3.2 Habit kind/time/created_on/deactivated_on in service and models, default habits on account creation, reorder endpoint, steps habit rules; verify all backend tests pass (`mvnw test`)
 
 ## 4. Frontend
 
