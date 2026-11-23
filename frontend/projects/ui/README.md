@@ -15,6 +15,7 @@ Podgląd wszystkich komponentów z przykładowymi danymi: **http://localhost:420
 | `tl-progress-bar` | cienki pasek postępu |
 | `tl-stat` | duża liczba + podpis + podpowiedź (np. „▼ 1,8 kg”) |
 | `tl-segmented` | przełącznik segmentowy w kształcie pigułki, `[(value)]` |
+| `tl-chip-select` | single-choice row of pill chips that scrolls sideways (long option lists), `[(value)]` |
 | `button[tlRoundButton]` | okrągły przycisk z ikoną (`chip`/`solid`/`ghost`, `sm`/`md`) |
 | `button[tlCheck]` | okrągłe odhaczenie (nawyki) |
 | `tl-bottom-nav` | pływająca dolna nawigacja |

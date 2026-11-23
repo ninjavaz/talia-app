@@ -5,6 +5,7 @@ import { NgIcon } from '@ng-icons/core';
 import {
   TlButton,
   TlCard,
+  TlChipSelect,
   TlList,
   TlListItem,
   TlPageHeader,
@@ -12,7 +13,6 @@ import {
   TlRing,
   TlRoundButton,
   TlSectionHeader,
-  TlSegmented,
   TlStat,
   TlStatTone,
   TlTrendChart,
@@ -33,6 +33,7 @@ type ChartMetric = string;
     RouterLink,
     TlButton,
     TlCard,
+    TlChipSelect,
     TlList,
     TlListItem,
     TlPageHeader,
@@ -40,7 +41,6 @@ type ChartMetric = string;
     TlRing,
     TlRoundButton,
     TlSectionHeader,
-    TlSegmented,
     TlStat,
     TlTrendChart,
     TranslatePipe,
@@ -92,7 +92,8 @@ type ChartMetric = string;
         />
       </div>
 
-      <tl-segmented
+      <!-- one chip per body part: scrolls sideways, so any number of measurements fits (issue #15) -->
+      <tl-chip-select
         class="mt-5"
         [options]="chartOptions()"
         [value]="chartMetric()"
