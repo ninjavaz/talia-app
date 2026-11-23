@@ -100,3 +100,26 @@ test('REQ-004 progress shows the difference since the first measurement', async 
   await expect(tile(page, 'Talia')).toContainText('80,5');
   await expect(tile(page, 'Talia')).toContainText('▼ 1,5 cm od startu');
 });
+
+test('REQ-003 many body parts still fit the chart switch (issue #15)', async ({ loggedIn: page }) => {
+  for (const name of ['Biodra', 'Biust', 'Udo lewe', 'Udo prawe', 'Ramię lewe', 'Ramię prawe', 'Łydka']) {
+    expect((await page.request.post('/api/body-parts', { data: { name } })).ok(), name).toBeTruthy();
+  }
+  await page.goto('/progress');
+
+  const row = page.locator('tl-chip-select');
+  const chips = row.getByRole('radio');
+  await expect(chips).toHaveCount(9);
+  // the row scrolls sideways instead of squeezing the labels or widening the page
+  const width = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  expect(await row.evaluate((el) => el.scrollWidth > el.clientWidth)).toBeTruthy();
+  for (const chip of await chips.all()) {
+    expect(await chip.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBeTruthy();
+  }
+
+  const last = chips.filter({ hasText: 'Łydka' });
+  await last.click();
+  await expect(last).toHaveAttribute('aria-checked', 'true');
+  await expect(last).toBeInViewport();
+});

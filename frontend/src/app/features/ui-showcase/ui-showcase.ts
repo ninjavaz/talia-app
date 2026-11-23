@@ -13,6 +13,7 @@ import {
   TlRoundButton,
   TlSectionHeader,
   TlSegmented,
+  TlChipSelect,
   TlStat,
 } from '@talia/ui';
 import { Theme, ThemeMode } from '../../core/theme/theme';
@@ -34,6 +35,7 @@ import { Theme, ThemeMode } from '../../core/theme/theme';
     TlRoundButton,
     TlSectionHeader,
     TlSegmented,
+    TlChipSelect,
     TlStat,
   ],
   template: `
@@ -105,6 +107,11 @@ import { Theme, ThemeMode } from '../../core/theme/theme';
       <tl-card>
         <tl-segmented [options]="themeOptions" [value]="theme.mode()" (valueChange)="setTheme($event)" />
       </tl-card>
+
+      <tl-section-header title="Wykres" />
+      <tl-card>
+        <tl-chip-select [options]="metricOptions" [(value)]="metric" />
+      </tl-card>
     </main>
 
     <tl-bottom-nav [items]="nav" />
@@ -124,6 +131,15 @@ export class UiShowcasePage {
     { name: 'Warzywa do 2 posiłków', done: true },
     { name: 'Bez słodkich napojów', done: false },
   ]);
+
+  protected readonly metric = signal('weight');
+  protected readonly metricOptions = [
+    { value: 'weight', label: 'Waga' },
+    ...['Talia', 'Biodra', 'Biust', 'Udo lewe', 'Udo prawe', 'Ramię', 'Łydka'].map((label, i) => ({
+      value: `part-${i}`,
+      label,
+    })),
+  ];
 
   protected readonly themeOptions = [
     { value: 'system', label: 'Auto' },

@@ -13,6 +13,7 @@ export * from './lib/ring/ring';
 export * from './lib/round-button/round-button';
 export * from './lib/section-header/section-header';
 export * from './lib/segmented/segmented';
+export * from './lib/chip-select/chip-select';
 export * from './lib/stat/stat';
 export * from './lib/button/button';
 export * from './lib/field/field';
